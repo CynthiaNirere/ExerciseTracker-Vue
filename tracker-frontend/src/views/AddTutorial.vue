@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import TutorialServices from "../services/tutorialServices";
+import TutorialServices from "../services/tutorialServices.js";
 import Utils from "../config/utils.js";
 import { useRouter } from "vue-router";
 

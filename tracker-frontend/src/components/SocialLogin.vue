@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import AuthServices from "../services/authServices";
+import AuthServices from "../services/authServices.js";
 import Utils from "../config/utils.js";
 import { useRouter } from "vue-router";
 

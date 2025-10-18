@@ -1,3 +1,4 @@
+
 <script setup>
 import SocialLogin from "../components/SocialLogin.vue";
 </script>
@@ -5,10 +6,11 @@ import SocialLogin from "../components/SocialLogin.vue";
 <template>
   <v-container>
     <v-toolbar>
-      <v-toolbar-title>Welcome to Tutorials!</v-toolbar-title>
+      <v-toolbar-title>Welcome to Tracker App!</v-toolbar-title>
     </v-toolbar>
     <br /><br />
     <SocialLogin />
     <br /><br />
   </v-container>
 </template>
+

@@ -1,7 +1,7 @@
 import { createStore } from "vuex";
-import Utils from "./config/utils";
+import Utils from "../config/utils.js";
 
-Vue.use(Vuex);
+//Vue.use(Vuex);
 
 const user = Utils.getStore("user");
 
