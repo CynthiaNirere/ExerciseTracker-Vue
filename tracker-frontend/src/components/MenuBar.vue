@@ -1,37 +1,63 @@
 <script setup>
 import ocLogo from "/oc-logo-white.png";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import Utils from "../config/utils";
 import AuthServices from "../services/authServices";
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
 
 const router = useRouter()
+const store = useStore()
 const user = ref(null);
-const title = ref("Tutorials");
+const title = ref("Exercise Tracker"); 
 const initials = ref("");
 const name = ref("");
 const logoURL = ref("");
 
 const resetMenu = () => {
-  user.value = null;
   user.value = Utils.getStore("user");
-  if (user.value) {
+  
+  if (user.value && user.value.fName && user.value.lName) {
     initials.value = user.value.fName[0] + user.value.lName[0];
     name.value = user.value.fName + " " + user.value.lName;
+  } else if (user.value && user.value.first_name && user.value.last_name) {
+    initials.value = user.value.first_name[0] + user.value.last_name[0];
+    name.value = user.value.first_name + " " + user.value.last_name;
+  } else {
+    initials.value = "";
+    name.value = "";
   }
 };
 
 const logout = () => {
-  AuthServices.logoutUser(user.value)
-    .then((response) => {
-      
-      Utils.removeItem("user");
-      router.push({ name: "login" });
-    })
-    .catch((error) => {
-      console.log("error", error);
-    });
+  console.log('🚪 Logging out...');
+  
+  if (user.value && user.value.token) {
+    AuthServices.logoutUser(user.value)
+      .then((response) => {
+        console.log(' Backend logout successful:', response);
+      })
+      .catch((error) => {
+        console.log("Backend logout error (continuing anyway):", error);
+      });
+  }
+  
+  store.commit('setCurrentUser', null);
+  store.commit('setLoginUser', null);
+  Utils.removeItem("user");
+  user.value = null;
+  initials.value = "";
+  name.value = "";
+  
+  console.log(' Logged out successfully, redirecting to login');
+  router.push({ name: "login" });
 };
+
+watch(() => store.state.currentUser, (newUser) => {
+  if (newUser) {
+    resetMenu();
+  }
+});
 
 onMounted(() => {
   logoURL.value = ocLogo;
@@ -42,7 +68,7 @@ onMounted(() => {
 <template>
   <div>
     <v-app-bar app>
-      <router-link :to="{ name: 'tutorials' }">
+      <router-link :to="{ name: 'coach-dashboard' }">
         <v-img
           class="mx-2"
           :src="logoURL"
@@ -55,12 +81,13 @@ onMounted(() => {
         {{ title }}
       </v-toolbar-title>
       <v-spacer></v-spacer>
+      
       <div v-if="user">
-        <v-btn class="mx-2" :to="{ name: 'tutorials' }"> List </v-btn>
-        <v-btn class="mx-2" :to="{ name: 'add' }"> Add Tutorial </v-btn>
+        <v-btn class="mx-2" :to="{ name: 'coach-dashboard' }"> Coach Dashboard </v-btn>
       </div>
+      
       <v-menu bottom min-width="200px" rounded offset-y v-if="user">
-        <template v-slot:activator="{ props }">
+        <template #activator="{ props }">
           <v-btn v-bind="props" icon x-large>
             <v-avatar v-if="user" color="secondary">
               <span class="accent--text font-weight-bold">{{ initials }}</span>
