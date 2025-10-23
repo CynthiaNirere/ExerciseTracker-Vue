@@ -38,7 +38,25 @@ const handleCredentialResponse = async (response) => {
       Utils.setStore("user", user.value);
       fName.value = user.value.fName;
       lName.value = user.value.lName;
-      router.push({ name: "tutorials" });
+      
+      // Redirect based on user role
+      console.log('User logged in:', user.value);
+      console.log('User role:', user.value.role);
+      
+      switch(user.value.role) {
+        case 'admin':
+          router.push({ name: 'adminDashboard' });
+          break;
+        case 'coach':
+          router.push({ name: 'coachDashboard' });
+          break;
+        case 'athlete':
+          router.push({ name: 'athleteDashboard' });
+          break;
+        default:
+          console.warn('Unknown role:', user.value.role);
+          router.push({ name: 'login' });
+      }
     })
     .catch((error) => {
       console.log("error", error);

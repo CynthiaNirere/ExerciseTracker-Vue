@@ -3,16 +3,19 @@ import Utils from "../config/utils.js";
 import AuthServices from "./authServices.js";
 import Router from "../router.js";
 
+// Use environment variable for API URL
 var baseurl = "";
 if (import.meta.env.DEV) {
-  baseurl = "http://localhost/tracker-t1/";
+  // Development: use the backend URL from .env
+  baseurl = import.meta.env.VITE_APP_API_URL || "http://localhost:3100/tracker-t1/";
 } else {
+  // Production: use relative path
   baseurl = "/tracker-t1/";
 }
 
 const apiClient = axios.create({
   baseURL: baseurl,
-  withCredentials: true,
+  withCredentials: true,  // Keep true since your backend uses credentials
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
@@ -30,9 +33,7 @@ const apiClient = axios.create({
   },
   transformResponse: function (data) {
     data = JSON.parse(data);
-    // if (!data.success && data.code == "expired-session") {
-    //   localStorage.deleteItem("user");
-    // }
+    
     if (data.message !== undefined && data.message.includes("Unauthorized")) {
       AuthServices.logoutUser(Utils.getStore("user"))
         .then((response) => {
@@ -43,9 +44,8 @@ const apiClient = axios.create({
         .catch((error) => {
           console.log("error", error);
         });
-      // Utils.removeItem("user")
     }
-    // console.log(Utils.getStore("user"))
+    
     return data;
   },
 });
