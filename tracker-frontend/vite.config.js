@@ -10,13 +10,22 @@ export default () => {
     process.env.APP_ENV === "development" ? "/" : "/seiv2025/p3/t1/";
 
   return defineConfig({
-    plugins: [vue(), vuetify({ autoImport: true })],
-
+    plugins: [
+      vue(),
+      vuetify({
+        autoImport: true,
+        styles: { configFile: 'src/styles/settings.scss' }
+      })
+    ],
     server: {
       host: "localhost",
       port: 8081,
     },
-
     base: baseURL,
+    resolve: {
+      alias: {
+        '@': '/src',
+      },
+    },
   });
 };

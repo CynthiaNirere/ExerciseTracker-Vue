@@ -17,10 +17,10 @@
     "dotenv": "^16.0.3",
     "eslint": "^8.28.0",
     "eslint-plugin-vue": "^9.7.0",
-    "vite-plugin-vuetify": "^1.0.0",
+    "vite-plugin-vuetify": "^2.1.2",
     "vue": "^3.2.47",
     "vue-router": "^4.1.6",
-    "vuetify": "^3.0.1",
+    "vuetify": "^3.10.7",
     "vuex": "^4.0.2",
     "webfontloader": "^1.6.28"
   },
@@ -29,6 +29,7 @@
     "@vitejs/plugin-vue": "^4.1.0",
     "cross-env": "^7.0.3",
     "cypress": "^12.9.0",
+    "sass": "^1.93.2",
     "vite": "^4.2.1"
   }
 }

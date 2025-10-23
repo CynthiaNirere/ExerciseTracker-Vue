@@ -2,6 +2,7 @@
 import LessonServices from "../services/lessonServices";
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+// No need to import Vuetify components directly as they are auto-imported
 
 const router = useRouter();
 const valid = ref(false);
