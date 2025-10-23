@@ -2,6 +2,11 @@
  * Vuetify3 Plugin
  */
 import { createVuetify } from "vuetify";
+import * as components from "vuetify/components";
+import * as directives from "vuetify/directives";
+
+// Import VDataTable from labs (included in vuetify package)
+import { VDataTable } from "vuetify/labs/components";
 
 // Misc
 import { loadFonts } from "./webfontloader";
@@ -27,6 +32,11 @@ const myCustomLightTheme = {
 };
 
 const vuetify = createVuetify({
+  components: {
+    ...components,
+    VDataTable, // Add VDataTable component
+  },
+  directives,
   theme: {
     defaultTheme: "myCustomLightTheme",
     themes: {

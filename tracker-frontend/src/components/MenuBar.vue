@@ -54,7 +54,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <v-app-bar app color="primary" dark>
+  <v-app-bar color="primary" elevation="2">
     <!-- Logo -->
     <router-link :to="getDashboardRoute()" style="text-decoration: none">
       <v-img
@@ -62,52 +62,59 @@ onMounted(() => {
         :src="logoURL"
         height="45"
         width="45"
-        contain
+        cover
       ></v-img>
     </router-link>
 
     <!-- App Title -->
     <v-toolbar-title>{{ title }}</v-toolbar-title>
+    
     <v-spacer></v-spacer>
 
     <!-- Admin Menu -->
     <template v-if="user && user.role === 'admin'">
-      <v-btn class="mx-2" :to="{ name: 'adminDashboard' }" text>Dashboard</v-btn>
-      <v-btn class="mx-2" :to="{ name: 'adminUsers' }" text>Users</v-btn>
+      <v-btn class="mx-2" :to="{ name: 'adminDashboard' }" variant="text">
+        Dashboard
+      </v-btn>
+      <v-btn class="mx-2" :to="{ name: 'userManagement' }" variant="text">
+        Users
+      </v-btn>
     </template>
 
     <!-- Coach Menu (future use) -->
     <template v-else-if="user && user.role === 'coach'">
-      <v-btn class="mx-2" :to="{ name: 'coachDashboard' }" text>Dashboard</v-btn>
-      <v-btn class="mx-2" :to="{ name: 'myAthletes' }" text>Athletes</v-btn>
+      <v-btn class="mx-2" :to="{ name: 'coachDashboard' }" variant="text">
+        Dashboard
+      </v-btn>
+      <v-btn class="mx-2" :to="{ name: 'myAthletes' }" variant="text">
+        Athletes
+      </v-btn>
     </template>
 
     <!-- Athlete Menu (future use) -->
     <template v-else-if="user && user.role === 'athlete'">
-      <v-btn class="mx-2" :to="{ name: 'athleteDashboard' }" text>Dashboard</v-btn>
-      <v-btn class="mx-2" :to="{ name: 'myProfile' }" text>Profile</v-btn>
+      <v-btn class="mx-2" :to="{ name: 'athleteDashboard' }" variant="text">
+        Dashboard
+      </v-btn>
+      <v-btn class="mx-2" :to="{ name: 'myProfile' }" variant="text">
+        Profile
+      </v-btn>
     </template>
 
     <!-- User Menu -->
-    <v-menu
-      v-if="user"
-      bottom
-      min-width="200"
-      rounded
-      offset-y
-    >
-      <template #activator="{ props }">
-        <v-btn v-bind="props" icon>
+    <v-menu v-if="user" location="bottom">
+      <template v-slot:activator="{ props }">
+        <v-btn v-bind="props" icon="mdi-account-circle">
           <v-avatar color="secondary">
             <span class="font-weight-bold">{{ initials }}</span>
           </v-avatar>
         </v-btn>
       </template>
 
-      <v-card>
+      <v-card min-width="200">
         <v-card-text>
           <div class="text-center">
-            <v-avatar color="secondary" class="mt-2 mb-2">
+            <v-avatar color="secondary" class="mt-2 mb-2" size="large">
               <span class="font-weight-bold">{{ initials }}</span>
             </v-avatar>
             <h3>{{ name }}</h3>
@@ -124,7 +131,10 @@ onMounted(() => {
               {{ user.role }}
             </v-chip>
             <v-divider class="my-3"></v-divider>
-            <v-btn variant="text" color="red" @click="logout">Logout</v-btn>
+            <v-btn variant="text" color="error" block @click="logout">
+              <v-icon start>mdi-logout</v-icon>
+              Logout
+            </v-btn>
           </div>
         </v-card-text>
       </v-card>
