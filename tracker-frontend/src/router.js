@@ -7,6 +7,7 @@ import Login from "./views/Login.vue";
 // Admin Views
 import AdminDashboard from "./views/AdminDashboard.vue";
 import AdminUsers from "./views/AdminUsers.vue";
+import AdminExercises from "./views/AdminExercises.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -38,6 +39,12 @@ const router = createRouter({
       path: "/admin/users",
       name: "userManagement",
       component: AdminUsers,
+      meta: { requiresAuth: true, role: "admin" },
+    },
+    {
+      path: "/admin/exercises",
+      name: "exerciseManagement",
+      component: AdminExercises,
       meta: { requiresAuth: true, role: "admin" },
     },
 

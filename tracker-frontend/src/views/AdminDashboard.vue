@@ -29,6 +29,13 @@ onMounted(() => {
         </v-card>
       </v-col>
       
+      <v-col cols="12" md="4">
+        <v-card @click="router.push({ name: 'exerciseManagement' })" hover>
+          <v-card-title class="text-h5">Exercise Management</v-card-title>
+          <v-card-text>Manage exercise library and categories</v-card-text>
+        </v-card>
+      </v-col>
+      
     </v-row>
   </v-container>
 </template>

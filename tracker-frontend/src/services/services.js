@@ -7,7 +7,7 @@ import Router from "../router.js";
 var baseurl = "";
 if (import.meta.env.DEV) {
   // Development: use the backend URL from .env
-  baseurl = import.meta.env.VITE_APP_API_URL || "http://localhost:3100/tracker-t1/";
+  baseurl = import.meta.env.VITE_APP_API_URL || "http://localhost:3021/tracker-t1/";
 } else {
   // Production: use relative path
   baseurl = "/tracker-t1/";
