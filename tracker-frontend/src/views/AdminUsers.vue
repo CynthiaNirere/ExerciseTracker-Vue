@@ -112,11 +112,11 @@ onMounted(() => {
 
 <template>
   <v-container>
-    <v-toolbar color="primary" dark>
-      <v-toolbar-title>User Management</v-toolbar-title>
+    <v-toolbar color="primary">
+      <v-toolbar-title class="text-white">User Management</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn color="success" @click="showAddDialog = true">
-        <v-icon>mdi-plus</v-icon>
+      <v-btn color="white" variant="elevated" @click="showAddDialog = true">
+        <v-icon color="primary">mdi-plus</v-icon>
         Add User
       </v-btn>
     </v-toolbar>
@@ -154,13 +154,13 @@ onMounted(() => {
         <template v-slot:item.role="{ item }">
           <v-chip
             :color="
-              item.role === 'admin' ? 'error' : 
-              item.role === 'coach' ? 'primary' : 
+              (item.raw || item).role === 'admin' ? 'error' : 
+              (item.raw || item).role === 'coach' ? 'primary' : 
               'success'
             "
             size="small"
           >
-            {{ item.role }}
+            {{ (item.raw || item).role }}
           </v-chip>
         </template>
 
@@ -178,7 +178,7 @@ onMounted(() => {
           <v-btn
             color="error"
             size="small"
-            @click="deleteUser(item.raw || item.id)"
+            @click="deleteUser((item.raw || item).id)"
           >
             <v-icon size="small">mdi-delete</v-icon>
             Delete
@@ -288,3 +288,7 @@ onMounted(() => {
     </v-dialog>
   </v-container>
 </template>
+
+<style scoped>
+/* Add any custom styles here if needed */
+</style>
