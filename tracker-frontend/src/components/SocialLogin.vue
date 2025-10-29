@@ -75,11 +75,11 @@ const handleCredentialResponse = async (response) => {
       
       if (userData.role === 'coach') {
         console.log(' Redirecting to coach-dashboard');
-        router.push({ name: 'coach-dashboard' });
+  router.push({ name: 'coachDashboard' });
       } else {
         // For now, redirect everyone to coach-dashboard since other routes don't exist yet
         console.log(' Redirecting to coach-dashboard (fallback - other routes not yet implemented)');
-        router.push({ name: 'coach-dashboard' });
+  router.push({ name: 'coachDashboard' });
       }
       
       //  UNCOMMENT THESE WHEN YOU CREATE THE OTHER DASHBOARDS:
