@@ -1,14 +1,42 @@
 <script setup>
-import { computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import Utils from '../config/utils'
 
 const router = useRouter()
-const route = useRoute()
 const store = useStore()
 
+const user = ref(null)
 const currentUser = computed(() => store.state.currentUser || store.state.loginUser)
+
+// Sample data - replace with actual API calls later
+const athleteCount = ref(2)
+const activeGoals = ref(3)
+const recentActivity = ref(5)
+const trainingPlans = ref(1)
+
+// Sample athletes data - replace with API call
+const athletes = ref([
+  {
+    id: 1,
+    fName: 'Sarah',
+    lName: 'Williams',
+    email: 'athlete@example.com',
+    activeGoals: 2,
+    totalWorkouts: 4,
+    lastActivity: '10/14/2024'
+  },
+  {
+    id: 2,
+    fName: 'John',
+    lName: 'Davis',
+    email: 'john@example.com',
+    activeGoals: 1,
+    totalWorkouts: 1,
+    lastActivity: '10/15/2024'
+  }
+])
 
 const goToAthletes = () => {
   console.log('🏃 Navigating to Athletes page...')
@@ -17,147 +45,158 @@ const goToAthletes = () => {
 
 const goToAddAthlete = () => {
   console.log('➕ Navigating to Add Athlete...')
-  // Navigate to athletes page with a query parameter to auto-open modal
   router.push({ path: '/coach/athletes', query: { action: 'add' } })
 }
 
-const logout = () => {
-  console.log('🚪 Logging out from Coach Dashboard...')
-  
-  // Clear all user data
-  store.commit('setCurrentUser', null)
-  store.commit('setLoginUser', null)
-  Utils.removeItem('user')
-  localStorage.removeItem('token')
-  
-  console.log('✅ User data cleared, redirecting to login')
-  router.push('/')
+const goToAthleteDetail = (athleteId) => {
+  console.log('👤 Navigating to athlete detail:', athleteId)
+  router.push(`/coach/athlete/${athleteId}`)
+}
+
+const getInitials = (fName, lName) => {
+  return `${fName[0]}${lName[0]}`
 }
 
 onMounted(() => {
-  console.log('🏠 CoachDashboard mounted')
-  console.log('👤 Current user:', currentUser.value)
+  user.value = Utils.getStore("user") || currentUser.value
   
-  if (!currentUser.value) {
-    console.log('❌ No user found, redirecting to login')
+  console.log(' CoachDashboard mounted')
+  console.log(' Current user:', user.value)
+  
+  if (!user.value) {
+    console.log(' No user found, redirecting to login')
     router.push('/')
-  } else if (currentUser.value.role !== 'coach') {
-    console.log('❌ User is not a coach:', currentUser.value.role)
+  } else if (user.value.role !== 'coach') {
+    console.log(' User is not a coach:', user.value.role)
     alert('Access denied. Coach role required.')
     router.push('/')
   } else {
-    console.log('✅ Coach authenticated successfully!')
+    console.log(' Coach authenticated successfully!')
   }
 })
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <main class="max-w-7xl mx-auto px-6 py-8">
-      <!-- Navigation Tabs -->
-      <div class="mb-8">
-        <div class="inline-flex bg-white rounded-full p-1 shadow-sm">
-          <button
-            @click="goToAthletes"
-            class="px-6 py-2 rounded-full text-sm font-medium bg-white text-gray-900 shadow-sm"
-          >
-            Athletes
-          </button>
-          <button
-            class="px-6 py-2 rounded-full text-sm font-medium text-gray-500 hover:text-gray-700"
-            disabled
-          >
-            Exercises
-          </button>
-          <button
-            class="px-6 py-2 rounded-full text-sm font-medium text-gray-500 hover:text-gray-700"
-            disabled
-          >
-            Plans
-          </button>
-        </div>
-      </div>
+  <v-container>
+    <v-toolbar color="primary" dark>
+      <v-toolbar-title>Coach Dashboard</v-toolbar-title>
+    </v-toolbar>
+    
+    <br />
+    
+    <v-alert type="info">
+      Welcome, Coach {{ user?.fName }} {{ user?.lName }}!
+    </v-alert>
+    
+    <br />
 
-      <!-- Content Area -->
-      <div class="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm relative">
-        <!-- Header with Add Button -->
-        <div class="mb-8">
-          <div class="flex justify-between items-start">
-            <div>
-              <h2 class="text-2xl font-bold text-gray-900">My Athletes</h2>
-              <p class="text-gray-500 mt-1">View and manage your athletes</p>
-            </div>
-            <button
-              @click="goToAddAthlete"
-              class="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-colors flex items-center space-x-2 shadow-lg"
+    <!-- Statistics Cards -->
+    <v-row>
+      <v-col cols="12" sm="6" md="3">
+        <v-card color="primary" dark>
+          <v-card-text>
+            <div class="text-h6">My Athletes</div>
+            <div class="text-h3 font-weight-bold">{{ athleteCount }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" md="3">
+        <v-card color="success" dark>
+          <v-card-text>
+            <div class="text-h6">Active Goals</div>
+            <div class="text-h3 font-weight-bold">{{ activeGoals }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" md="3">
+        <v-card color="info" dark>
+          <v-card-text>
+            <div class="text-h6">Recent Activity</div>
+            <div class="text-h3 font-weight-bold">{{ recentActivity }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" md="3">
+        <v-card color="warning" dark>
+          <v-card-text>
+            <div class="text-h6">Training Plans</div>
+            <div class="text-h3 font-weight-bold">{{ trainingPlans }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <br />
+
+    <!-- Athletes List -->
+    <v-card>
+      <v-card-title class="text-h5">
+        My Athletes
+        <v-spacer></v-spacer>
+        <v-btn color="primary" @click="goToAddAthlete">
+          <v-icon left>mdi-plus</v-icon>
+          Add Athlete
+        </v-btn>
+      </v-card-title>
+      
+      <v-card-text>
+        <v-row>
+          <!-- Dynamic Athlete Cards -->
+          <v-col 
+            v-for="athlete in athletes" 
+            :key="athlete.id" 
+            cols="12" 
+            md="6"
+          >
+            <v-card 
+              @click="goToAthleteDetail(athlete.id)" 
+              hover 
+              class="pa-4" 
+              elevation="1"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-              <span class="font-semibold">Add Athlete</span>
-            </button>
-          </div>
-        </div>
+              <div class="d-flex align-center mb-4">
+                <v-avatar color="grey-lighten-1" size="56" class="mr-4">
+                  <span class="text-h6">{{ getInitials(athlete.fName, athlete.lName) }}</span>
+                </v-avatar>
+                <div>
+                  <div class="text-h6 font-weight-bold">{{ athlete.fName }} {{ athlete.lName }}</div>
+                  <div class="text-caption text-grey">{{ athlete.email }}</div>
+                </div>
+              </div>
 
-        <!-- Athletes Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Athlete Card 1 -->
-          <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer" @click="goToAthletes">
-            <div class="flex items-center space-x-4 mb-6">
-              <div class="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 font-bold text-lg">
-                SW
-              </div>
-              <div>
-                <h3 class="font-bold text-gray-900 text-lg">Sarah Williams</h3>
-                <p class="text-gray-500 text-sm">athlete@example.com</p>
-              </div>
-            </div>
-            
-            <div class="space-y-3">
-              <div class="flex justify-between items-center">
-                <span class="text-gray-600">Active Goals</span>
-                <span class="text-gray-900 font-semibold">2</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-gray-600">Total Workouts</span>
-                <span class="text-gray-900 font-semibold">4</span>
-              </div>
-            </div>
-            
-            <div class="mt-6 pt-4 border-t border-gray-200">
-              <p class="text-gray-400 text-sm">Last activity: 10/14/2024</p>
-            </div>
-          </div>
+              <v-divider class="my-3"></v-divider>
 
-          <!-- Athlete Card 2 -->
-          <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer" @click="goToAthletes">
-            <div class="flex items-center space-x-4 mb-6">
-              <div class="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 font-bold text-lg">
-                JD
+              <div class="d-flex justify-space-between mb-2">
+                <span class="text-body-2">Active Goals</span>
+                <span class="font-weight-bold">{{ athlete.activeGoals }}</span>
               </div>
-              <div>
-                <h3 class="font-bold text-gray-900 text-lg">John Davis</h3>
-                <p class="text-gray-500 text-sm">john@example.com</p>
+              <div class="d-flex justify-space-between mb-2">
+                <span class="text-body-2">Total Workouts</span>
+                <span class="font-weight-bold">{{ athlete.totalWorkouts }}</span>
               </div>
-            </div>
-            
-            <div class="space-y-3">
-              <div class="flex justify-between items-center">
-                <span class="text-gray-600">Active Goals</span>
-                <span class="text-gray-900 font-semibold">1</span>
+
+              <v-divider class="my-3"></v-divider>
+
+              <div class="text-caption text-grey">
+                Last activity: {{ athlete.lastActivity }}
               </div>
-              <div class="flex justify-between items-center">
-                <span class="text-gray-600">Total Workouts</span>
-                <span class="text-gray-900 font-semibold">1</span>
-              </div>
-            </div>
-            
-            <div class="mt-6 pt-4 border-t border-gray-200">
-              <p class="text-gray-400 text-sm">Last activity: 10/15/2024</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+  </v-container>
 </template>
+
+<style scoped>
+.v-card {
+  transition: transform 0.2s;
+}
+
+.v-card:hover {
+  transform: translateY(-2px);
+}
+</style>
