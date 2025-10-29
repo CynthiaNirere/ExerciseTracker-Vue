@@ -3,6 +3,7 @@ import store from "./store/store"; // Import your store
 
 import Login from "./views/Login.vue";
 import CoachDashboard from "./views/coachDashboard.vue";
+import CoachAthletes from "./views/coachAthletes.vue"; // ADD THIS
 
 // COMMENTED OUT - Uncomment these when you create the tutorial files
 // import TutorialsList from "./views/TutorialsList.vue";
@@ -27,9 +28,14 @@ const router = createRouter({
       component: CoachDashboard,
       meta: { requiresAuth: true, role: "coach" },
     },
+    {
+      path: "/coach/athletes",
+      name: "coach-athletes",
+      component: CoachAthletes,
+      meta: { requiresAuth: true, role: "coach" },
+    },
   ], 
 }); 
-
 
 router.beforeEach((to, from, next) => {
   const isAuthenticated =
@@ -46,12 +52,12 @@ router.beforeEach((to, from, next) => {
 
   // If route requires authentication and user is not authenticated
   if (to.meta.requiresAuth && !isAuthenticated) {
-    console.log(" Not authenticated, redirecting to login");
+    console.log("❌ Not authenticated, redirecting to login");
     next("/");
   }
   // If user is authenticated and trying to access login page
   else if (isAuthenticated && to.path === "/") {
-    console.log(" Already authenticated, redirecting based on role");
+    console.log("✅ Already authenticated, redirecting based on role");
     if (userRole === "coach") {
       next("/coach-dashboard");
     } else {
@@ -61,7 +67,7 @@ router.beforeEach((to, from, next) => {
   }
   // If route requires specific role
   else if (to.meta.role && userRole !== to.meta.role) {
-    console.log(" Wrong role, redirecting to appropriate dashboard");
+    console.log("⚠️ Wrong role, redirecting to appropriate dashboard");
     if (userRole === "coach") {
       next("/coach-dashboard");
     } else {
@@ -70,7 +76,7 @@ router.beforeEach((to, from, next) => {
   }
   // Allow navigation
   else {
-    console.log(" Proceeding to", to.name);
+    console.log("✅ Proceeding to", to.name);
     next();
   }
 });
