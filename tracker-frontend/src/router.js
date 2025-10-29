@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Utils from "./config/utils.js";
 
+<<<<<<< HEAD
 const routes = [
   // Public Routes
   {
@@ -93,6 +94,43 @@ const router = createRouter({
 });
 
 // Navigation Guard
+=======
+import Login from "./views/Login.vue";
+import CoachDashboard from "./views/coachDashboard.vue";
+import CoachAthletes from "./views/coachAthletes.vue"; // ADD THIS
+
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: "/",
+      alias: "/login",
+      name: "login",
+      component: Login,
+    },
+    {
+      path: "/coach-dashboard",
+      name: "coach-dashboard",
+      component: CoachDashboard,
+      meta: { requiresAuth: true, role: "coach" },
+    },
+    {
+      path: "/coach/athletes",
+      name: "coach-athletes",
+      component: CoachAthletes,
+      meta: { requiresAuth: true, role: "coach" },
+    },
+    {
+  path: "/coach/athlete/:id",
+  name: "athleteDetail",
+  component: () => import("./views/athleteDetail.vue"),
+  meta: { requiresAuth: true, role: "coach" }
+},
+  ], 
+}); 
+
+>>>>>>> 43399e5aa38a708786d835222012a75ced97f92f
 router.beforeEach((to, from, next) => {
   const user = Utils.getStore("user");
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
