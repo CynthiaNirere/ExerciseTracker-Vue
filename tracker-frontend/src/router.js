@@ -8,6 +8,7 @@ import Login from "./views/Login.vue";
 import AdminDashboard from "./views/AdminDashboard.vue";
 import AdminUsers from "./views/AdminUsers.vue";
 import AdminExercises from "./views/AdminExercises.vue";
+import AdminExercisePlans from "./views/AdminExercisePlans.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,6 +46,12 @@ const router = createRouter({
       path: "/admin/exercises",
       name: "exerciseManagement",
       component: AdminExercises,
+      meta: { requiresAuth: true, role: "admin" },
+    },
+    {
+      path: "/admin/exercise-plans",
+      name: "exercisePlansManagement",
+      component: AdminExercisePlans,
       meta: { requiresAuth: true, role: "admin" },
     },
 

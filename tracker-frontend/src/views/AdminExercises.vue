@@ -10,8 +10,8 @@ const search = ref("");
 const newExercise = ref({
   name: "",
   category: "",
-  muscleGroups: "",
-  equipment: "",
+  muscleGroup: "",
+  equipmentNeeded: "",
   description: "",
   instructions: "",
   difficulty: "",
@@ -41,8 +41,8 @@ const difficulties = [
 const headers = [
   { title: 'Name', key: 'name' },
   { title: 'Category', key: 'category' },
-  { title: 'Muscle Groups', key: 'muscleGroups' },
-  { title: 'Equipment', key: 'equipment' },
+  { title: 'Muscle Group', key: 'muscleGroup' },
+  { title: 'Equipment', key: 'equipmentNeeded' },
   { title: 'Actions', key: 'actions', sortable: false }
 ];
 
@@ -51,6 +51,7 @@ const fetchExercises = async () => {
   try {
     const response = await ExerciseServices.getAllExercises();
     exercises.value = response.data;
+    console.log('Exercises data:', response.data); 
     message.value = "Exercises loaded successfully";
   } catch (error) {
     message.value = "Error loading exercises: " + error.message;
@@ -66,8 +67,8 @@ const saveExercise = async () => {
     newExercise.value = { 
       name: "", 
       category: "", 
-      muscleGroups: "", 
-      equipment: "", 
+      muscleGroup: "", 
+      equipmentNeeded: "", 
       description: "", 
       instructions: "", 
       difficulty: "" 
@@ -116,8 +117,8 @@ const cancelAdd = () => {
   newExercise.value = { 
     name: "", 
     category: "", 
-    muscleGroups: "", 
-    equipment: "", 
+    muscleGroup: "", 
+    equipmentNeeded: "", 
     description: "", 
     instructions: "", 
     difficulty: "" 
@@ -193,18 +194,20 @@ onMounted(() => {
           <!-- Category Column -->
           <template v-slot:item.category="{ item }">
             <v-chip
+              v-if="item.raw?.category || item.category"
               :color="
-                item.category === 'Strength' ? 'blue' : 
-                item.category === 'Cardio' ? 'red' : 
-                item.category === 'Plyometrics' ? 'orange' :
-                item.category === 'Flexibility' ? 'green' :
+                (item.raw?.category || item.category) === 'Strength' ? 'blue' : 
+                (item.raw?.category || item.category) === 'Cardio' ? 'red' : 
+                (item.raw?.category || item.category) === 'Plyometrics' ? 'orange' :
+                (item.raw?.category || item.category) === 'Flexibility' ? 'green' :
                 'purple'
               "
               size="small"
               variant="outlined"
             >
-              {{ item.category }}
+              {{ item.raw?.category || item.category }}
             </v-chip>
+            <span v-else class="text-grey">—</span>
           </template>
 
           <!-- Actions Column -->
@@ -221,7 +224,7 @@ onMounted(() => {
             <v-btn
               color="error"
               size="small"
-              @click="deleteExercise(item.raw || item.id)"
+              @click="deleteExercise((item.raw || item).id)"
               prepend-icon="mdi-delete"
             >
               Delete
@@ -263,7 +266,7 @@ onMounted(() => {
             <v-row>
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="newExercise.muscleGroups"
+                  v-model="newExercise.muscleGroup"
                   label="Muscle Groups"
                   hint="e.g., Quadriceps, Glutes, Hamstrings"
                   persistent-hint
@@ -272,7 +275,7 @@ onMounted(() => {
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="newExercise.equipment"
+                  v-model="newExercise.equipmentNeeded"
                   label="Required Equipment"
                   hint="e.g., Barbell, Squat Rack"
                   persistent-hint
@@ -353,7 +356,7 @@ onMounted(() => {
             <v-row>
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="selectedExercise.muscleGroups"
+                  v-model="selectedExercise.muscleGroup"
                   label="Muscle Groups"
                   hint="e.g., Quadriceps, Glutes, Hamstrings"
                   persistent-hint
@@ -362,7 +365,7 @@ onMounted(() => {
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="selectedExercise.equipment"
+                  v-model="selectedExercise.equipmentNeeded"
                   label="Required Equipment"
                   hint="e.g., Barbell, Squat Rack"
                   persistent-hint
