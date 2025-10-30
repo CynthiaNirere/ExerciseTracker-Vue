@@ -68,7 +68,7 @@ onMounted(() => {
 <template>
   <div>
     <v-app-bar app>
-      <router-link :to="{ name: 'coach-dashboard' }">
+      <router-link :to="{ name: 'coachDashboard' }">
         <v-img
           class="mx-2"
           :src="logoURL"
@@ -83,7 +83,7 @@ onMounted(() => {
       <v-spacer></v-spacer>
       
       <div v-if="user">
-        <v-btn class="mx-2" :to="{ name: 'coach-dashboard' }"> Coach Dashboard </v-btn>
+        <v-btn class="mx-2" :to="{ name: 'coachDashboard' }"> Coach Dashboard </v-btn>
       </div>
       
       <v-menu bottom min-width="200px" rounded offset-y v-if="user">

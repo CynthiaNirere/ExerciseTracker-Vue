@@ -15,8 +15,8 @@ const router = createRouter({
       component: Login,
     },
     {
-      path: "/coach-dashboard",
-      name: "coach-dashboard",
+      path: "/coachDashboard",
+      name: "coachDashboard",
       component: CoachDashboard,
       meta: { requiresAuth: true, role: "coach" },
     },
@@ -46,7 +46,7 @@ router.beforeEach((to, from, next) => {
     if (user.role === "admin") {
       next({ name: "adminDashboard" });
     } else if (user.role === "coach") {
-      next({ name: "coach-dashboard" });
+      next({ name: "coachDashboard" });
     } else if (user.role === "athlete") {
       next({ name: "athleteDashboard" });
     } else {
