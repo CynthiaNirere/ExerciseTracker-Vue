@@ -57,12 +57,12 @@ const goToAthletes = () => {
 }
 
 const goToAddAthlete = () => {
-  console.log('➕ Navigating to Add Athlete...')
+  console.log(' Navigating to Add Athlete...')
   router.push({ path: '/coach/athletes', query: { action: 'add' } })
 }
 
 const goToAthleteDetail = (athleteId) => {
-  console.log('👤 Navigating to athlete detail:', athleteId)
+  console.log(' Navigating to athlete detail:', athleteId)
   router.push(`/coach/athlete/${athleteId}`)
 }
 
@@ -113,14 +113,9 @@ onMounted(() => {
 </template>
 =======
   <v-container>
-    <v-toolbar color="primary" dark>
-      <v-toolbar-title>Coach Dashboard</v-toolbar-title>
-    </v-toolbar>
-    
-    <br />
     
     <v-alert type="info">
-      Welcome, Coach {{ user?.fName }} {{ user?.lName }}!
+    Welcome, Coach {{ currentUser?.first_name || currentUser?.fName }}!
     </v-alert>
     
     <br />
@@ -170,11 +165,7 @@ onMounted(() => {
     <v-card>
       <v-card-title class="text-h5">
         My Athletes
-        <v-spacer></v-spacer>
-        <v-btn color="primary" @click="goToAddAthlete">
-          <v-icon left>mdi-plus</v-icon>
-          Add Athlete
-        </v-btn>
+        <v-spacer></v-spacer>        
       </v-card-title>
       
       <v-card-text>
