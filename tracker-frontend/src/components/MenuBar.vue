@@ -65,7 +65,7 @@ onMounted(() => {
         cover
       ></v-img>
     </router-link>
-
+    
     <!-- App Title -->
     <v-toolbar-title>{{ title }}</v-toolbar-title>
     
@@ -81,36 +81,29 @@ onMounted(() => {
       </v-btn>
     </template>
 
-    <!-- Coach Menu (future use) -->
-    <template v-else-if="user && user.role === 'coach'">
-      <v-btn class="mx-2" :to="{ name: 'coachDashboard' }" variant="text">
-        Dashboard
-      </v-btn>
-      <v-btn class="mx-2" :to="{ name: 'myAthletes' }" variant="text">
-        Athletes
-      </v-btn>
-    </template>
-
-    <!-- Athlete Menu (future use) -->
+    <!-- Athlete Menu -->
     <template v-else-if="user && user.role === 'athlete'">
       <v-btn class="mx-2" :to="{ name: 'athleteDashboard' }" variant="text">
         Dashboard
       </v-btn>
-      <v-btn class="mx-2" :to="{ name: 'myProfile' }" variant="text">
+      <v-btn class="mx-2" :to="{ name: 'athleteProfile' }" variant="text">
         Profile
+      </v-btn>
+      <v-btn class="mx-2" :to="{ name: 'athleteGoals' }" variant="text">
+        Goals
       </v-btn>
     </template>
 
     <!-- User Menu -->
     <v-menu v-if="user" location="bottom">
       <template v-slot:activator="{ props }">
-        <v-btn v-bind="props" icon="mdi-account-circle">
+        <v-btn v-bind="props" icon>
           <v-avatar color="secondary">
             <span class="font-weight-bold">{{ initials }}</span>
           </v-avatar>
         </v-btn>
       </template>
-
+      
       <v-card min-width="200">
         <v-card-text>
           <div class="text-center">

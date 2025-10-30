@@ -7,6 +7,7 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 const valid = ref(true);
 const user = ref(null);
+const loading = ref(true);
 const profile = ref({
   fName: "",
   lName: "",
@@ -18,29 +19,41 @@ const message = ref("");
 const loadProfile = async () => {
   try {
     user.value = Utils.getStore("user");
-    if (user.value) {
-      profile.value = {
-        fName: user.value.fName,
-        lName: user.value.lName,
-        email: user.value.email,
-      };
+    if (!user.value || !user.value.userId) {
+      message.value = "Error: User not logged in";
+      router.push({ name: "login" });
+      return;
     }
+    
+    profile.value = {
+      fName: user.value.fName || "",
+      lName: user.value.lName || "",
+      email: user.value.email || "",
+    };
+    loading.value = false;
   } catch (error) {
     message.value = "Error loading profile: " + error.message;
+    loading.value = false;
   }
 };
 
 // Update profile
 const updateProfile = async () => {
+  if (!user.value || !user.value.userId) {
+    message.value = "Error: User not found";
+    return;
+  }
+  
   try {
-    await UserServices.updateUser(user.value.id, profile.value);
+    await UserServices.updateUser(user.value.userId, profile.value);
     // Update local storage
     const updatedUser = { ...user.value, ...profile.value };
     Utils.setStore("user", updatedUser);
     user.value = updatedUser;
     message.value = "Profile updated successfully";
   } catch (error) {
-    message.value = "Error updating profile: " + error.response?.data?.message || error.message;
+    message.value = "Error updating profile: " + (error.response?.data?.message || error.message);
+    console.error("Update error:", error);
   }
 };
 
@@ -74,8 +87,16 @@ onMounted(() => {
       {{ message }}
     </v-alert>
 
+    <!-- Loading State -->
+    <v-card v-if="loading">
+      <v-card-text class="text-center">
+        <v-progress-circular indeterminate color="success"></v-progress-circular>
+        <p class="mt-4">Loading profile...</p>
+      </v-card-text>
+    </v-card>
+
     <!-- Profile Form -->
-    <v-card>
+    <v-card v-else>
       <v-card-text>
         <v-form v-model="valid">
           <v-text-field
@@ -84,12 +105,14 @@ onMounted(() => {
             :counter="50"
             required
           ></v-text-field>
+
           <v-text-field
             v-model="profile.lName"
             label="Last Name"
             :counter="50"
             required
           ></v-text-field>
+
           <v-text-field
             v-model="profile.email"
             label="Email"
