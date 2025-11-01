@@ -40,13 +40,12 @@ const athletes = ref([
 ])
 
 const goToAthletes = () => {
-  console.log('🏃 Navigating to Athletes page...')
-  router.push('/coach/athletes')
+  router.push({ name: 'coach-athletes' })
 }
 
 const goToAddAthlete = () => {
   console.log(' Navigating to Add Athlete...')
-  router.push({ path: '/coach/athletes', query: { action: 'add' } })
+  router.push({ name: 'coach-athletes', query: { action: 'add' } })
 }
 
 const goToAthleteDetail = (athleteId) => {

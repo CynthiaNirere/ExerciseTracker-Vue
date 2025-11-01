@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from 'vuex'
+import Utils from '../config/utils'
 import axios from 'axios'
 
 const router = useRouter()
@@ -9,6 +10,8 @@ const route = useRoute()
 const store = useStore()
 
 const currentUser = computed(() => store.state.currentUser || store.state.loginUser)
+const user = ref(null)
+
 const athletes = ref([])
 const loading = ref(true)
 const showAddAthleteModal = ref(false)
@@ -23,21 +26,27 @@ const successMessage = ref('')
 const loadAthletes = async () => {
   try {
     loading.value = true
-    const token = localStorage.getItem('token')
+    
+    // Get token from user object in localStorage
+    const user = Utils.getStore("user")
+    const token = user?.token // ← Get token from user object
     
     if (!token) {
+      console.log('❌ No token found')
       router.push('/')
       return
     }
 
-    const response = await axios.get('http://localhost:3100/tracker-t1/api/coach/athletes', {
+    console.log('🔄 Loading athletes with token...')
+    const response = await axios.get('http://localhost:3021/tracker-t1/api/coach/athletes', { // ← Also fix the port!
       headers: { Authorization: `Bearer ${token}` }
     })
 
     athletes.value = response.data
     loading.value = false
+    console.log('✅ Athletes loaded:', athletes.value.length)
   } catch (error) {
-    console.error('Error loading athletes:', error)
+    console.error('❌ Error loading athletes:', error)
     loading.value = false
   }
 }
@@ -65,10 +74,11 @@ const handleAddAthlete = async () => {
   submitting.value = true
 
   try {
-    const token = localStorage.getItem('token')
+    const user = Utils.getStore("user") // ← Add this
+    const token = user?.token // ← Get token from user
     
     await axios.post(
-      'http://localhost:3100/tracker-t1/api/coach/athletes/assign',
+      'http://localhost:3021/tracker-t1/api/coach/athletes/assign',
       {
         athleteEmail: newAthlete.value.email,
         notes: newAthlete.value.notes
@@ -105,7 +115,7 @@ const formatDate = (dateString) => {
 }
 
 const goToDashboard = () => {
-  router.push('/coach/dashboard')
+  router.push({ name: 'coachDashboard' }) 
 }
 
 const logout = () => {
@@ -117,15 +127,17 @@ const logout = () => {
 }
 
 onMounted(() => {
+  user.value = Utils.getStore("user") || currentUser.value
+
   console.log('🎯 CoachAthletes mounted')
-  console.log('👤 Current user:', currentUser.value)
+  console.log('👤 Current user:', user.value)
   console.log('📍 Route query:', route.query)
-  
-  if (!currentUser.value) {
+
+  if (!user.value) {
     console.log('❌ No user found, redirecting to login')
     router.push('/')
-  } else if (currentUser.value.role !== 'coach') {
-    console.log('❌ User is not a coach:', currentUser.value.role)
+  } else if (user.value.role !== 'coach') {
+    console.log('❌ User is not a coach:', user.value.role)
     alert('Access denied. Coach role required.')
     router.push('/')
   } else {
