@@ -1,17 +1,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 import Utils from '../config/utils'
 
 const router = useRouter()
+const route = useRoute()
 const store = useStore()
 
 const user = ref(null)
 const currentUser = computed(() => store.state.currentUser || store.state.loginUser)
 
 // Active tab
-const activeTab = ref('athletes')
+const activeTab = ref('plans')
 
 // Sample data
 const athleteCount = ref(2)
@@ -19,29 +20,18 @@ const activeGoals = ref(3)
 const recentActivity = ref(5)
 const trainingPlans = ref(1)
 
-const athletes = ref([
+const plans = ref([
   {
     id: 1,
-    fName: 'Sarah',
-    lName: 'Williams',
-    email: 'athlete@example.com',
-    activeGoals: 2,
-    totalWorkouts: 4,
-    lastActivity: '10/14/2024'
-  },
-  {
-    id: 2,
-    fName: 'John',
-    lName: 'Davis',
-    email: 'john@example.com',
-    activeGoals: 1,
-    totalWorkouts: 1,
-    lastActivity: '10/15/2024'
+    name: 'Strength Foundation',
+    description: '8-week beginner strength program',
+    duration: '8 weeks',
+    assignedAthletes: 2,
+    exercises: 12
   }
 ])
 
 const changeTab = (tab) => {
-  console.log('🔄 Tab clicked:', tab)
   if (tab === 'athletes') {
     router.push({ name: 'coachDashboard' })
   } else if (tab === 'exercises') {
@@ -49,14 +39,6 @@ const changeTab = (tab) => {
   } else if (tab === 'plans') {
     router.push({ name: 'coach-plans' })
   }
-}
-
-const goToAthleteDetail = (athleteId) => {
-  router.push({ name: 'athleteDetail', params: { id: athleteId } })
-}
-
-const getInitials = (fName, lName) => {
-  return `${fName[0]}${lName[0]}`
 }
 
 onMounted(() => {
@@ -126,54 +108,53 @@ onMounted(() => {
         v-model="activeTab"
         bg-color="white"
         color="primary"
-        @update:model-value="changeTab"
       >
-        <v-tab value="athletes">Athletes</v-tab>
-        <v-tab value="exercises">Exercises</v-tab>
-        <v-tab value="plans">Plans</v-tab>
+        <v-tab value="athletes" @click="changeTab('athletes')">Athletes</v-tab>
+        <v-tab value="exercises" @click="changeTab('exercises')">Exercises</v-tab>
+        <v-tab value="plans" @click="changeTab('plans')">Plans</v-tab>
       </v-tabs>
 
-      <!-- Athletes Content (only show on dashboard) -->
-      <v-card-text v-if="activeTab === 'athletes'">
+      <!-- Plans Content -->
+      <v-card-text>
+        <div class="d-flex justify-space-between align-center mb-4">
+          <div>
+            <div class="text-h5 font-weight-bold">Training Plans</div>
+            <div class="text-caption text-grey">Create and manage training programs</div>
+          </div>
+          <v-btn color="black">
+            <v-icon left>mdi-plus</v-icon>
+            Create Plan
+          </v-btn>
+        </div>
+
+        <!-- Plans Grid -->
         <v-row>
-          <v-col 
-            v-for="athlete in athletes" 
-            :key="athlete.id" 
-            cols="12" 
-            md="6"
-          >
-            <v-card 
-              @click="goToAthleteDetail(athlete.id)" 
-              hover 
-              class="pa-4" 
-              elevation="1"
-            >
-              <div class="d-flex align-center mb-4">
-                <v-avatar color="grey-lighten-1" size="56" class="mr-4">
-                  <span class="text-h6">{{ getInitials(athlete.fName, athlete.lName) }}</span>
-                </v-avatar>
-                <div>
-                  <div class="text-h6 font-weight-bold">{{ athlete.fName }} {{ athlete.lName }}</div>
-                  <div class="text-caption text-grey">{{ athlete.email }}</div>
+          <v-col v-for="plan in plans" :key="plan.id" cols="12" md="4">
+            <v-card elevation="1" hover>
+              <v-card-text>
+                <div class="text-h6 font-weight-bold mb-2">{{ plan.name }}</div>
+                <div class="text-caption text-grey mb-4">{{ plan.description }}</div>
+                
+                <v-divider class="my-3"></v-divider>
+                
+                <div class="d-flex justify-space-between mb-2">
+                  <span class="text-body-2">Duration</span>
+                  <span class="font-weight-bold">{{ plan.duration }}</span>
                 </div>
-              </div>
-
-              <v-divider class="my-3"></v-divider>
-
-              <div class="d-flex justify-space-between mb-2">
-                <span class="text-body-2">Active Goals</span>
-                <span class="font-weight-bold">{{ athlete.activeGoals }}</span>
-              </div>
-              <div class="d-flex justify-space-between mb-2">
-                <span class="text-body-2">Total Workouts</span>
-                <span class="font-weight-bold">{{ athlete.totalWorkouts }}</span>
-              </div>
-
-              <v-divider class="my-3"></v-divider>
-
-              <div class="text-caption text-grey">
-                Last activity: {{ athlete.lastActivity }}
-              </div>
+                <div class="d-flex justify-space-between mb-2">
+                  <span class="text-body-2">Athletes</span>
+                  <span class="font-weight-bold">{{ plan.assignedAthletes }}</span>
+                </div>
+                <div class="d-flex justify-space-between">
+                  <span class="text-body-2">Exercises</span>
+                  <span class="font-weight-bold">{{ plan.exercises }}</span>
+                </div>
+              </v-card-text>
+              
+              <v-card-actions>
+                <v-btn variant="text" color="primary">Edit</v-btn>
+                <v-btn variant="text" color="error">Delete</v-btn>
+              </v-card-actions>
             </v-card>
           </v-col>
         </v-row>

@@ -4,6 +4,8 @@ import Utils from "./config/utils.js";
 import Login from "./views/Login.vue";
 import CoachDashboard from "./views/coachDashboard.vue";
 import CoachAthletes from "./views/coachAthletes.vue";
+import CoachExercises from "./views/coachExercises.vue";  
+import CoachPlans from "./views/coachPlans.vue";          
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -32,7 +34,19 @@ const router = createRouter({
       component: () => import("./views/athleteDetail.vue"),
       meta: { requiresAuth: true, role: "coach" }
     },
-  ], 
+ {
+      path: "/coach/exercises",
+      name: "coach-exercises",
+      component: CoachExercises,  
+      meta: { requiresAuth: true, role: "coach" },
+    },
+    {
+      path: "/coach/plans",
+      name: "coach-plans",
+      component: CoachPlans, 
+      meta: { requiresAuth: true, role: "coach" },
+    },
+  ],
 }); 
 
 router.beforeEach((to, from, next) => {
