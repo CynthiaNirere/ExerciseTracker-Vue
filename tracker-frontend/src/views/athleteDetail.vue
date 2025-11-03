@@ -78,7 +78,7 @@ const exercises = ref([
 ])
 
 const goBack = () => {
-  router.push({ name: 'coach-athletes' })
+  router.push({ name: 'coachDashboard' })  
 }
 
 const openAddGoalDialog = () => {
