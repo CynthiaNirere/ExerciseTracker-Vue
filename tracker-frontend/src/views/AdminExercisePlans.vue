@@ -1,9 +1,12 @@
 <template>
   <div class="admin-exercise-plans">
     <div class="header">
-      <h1>Exercise Plans</h1>
-      <button @click="showPlanModal = true" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Add New Plan
+      <div>
+        <h1>Exercise Plans</h1>
+        <p class="subtitle">Create and manage training programs</p>
+      </div>
+      <button @click="openAddPlanModal" class="btn-create">
+        <i class="fas fa-plus"></i> Create Plan
       </button>
     </div>
 
@@ -19,19 +22,34 @@
           </div>
           <div class="plan-body">
             <p class="description" v-if="plan.description">{{ plan.description }}</p>
-            <div class="plan-meta">
-              <span><i class="fas fa-dumbbell"></i> {{ plan.exercises ? plan.exercises.length : 0 }} exercises</span>
+            <div class="exercises-preview">
+              <div v-if="plan.exercises && plan.exercises.length > 0" class="exercise-list">
+                <div v-for="exercise in plan.exercises.slice(0, 3)" :key="exercise.id" class="exercise-preview-item">
+                  <span class="exercise-name">{{ exercise.name }}</span>
+                  <span v-if="exercise.ExercisePlanItem || exercise.exercise_plan_items" class="exercise-meta">
+                    {{ (exercise.ExercisePlanItem || exercise.exercise_plan_items)?.sets }} sets × {{ (exercise.ExercisePlanItem || exercise.exercise_plan_items)?.reps }} reps
+                    <span v-if="(exercise.ExercisePlanItem || exercise.exercise_plan_items)?.weight && (exercise.ExercisePlanItem || exercise.exercise_plan_items).weight > 0"> 
+                      @ {{ (exercise.ExercisePlanItem || exercise.exercise_plan_items).weight }} lbs
+                    </span>
+                  </span>
+                </div>
+                <div v-if="plan.exercises.length > 3" class="more-exercises">
+                  +{{ plan.exercises.length - 3 }} more
+                </div>
+              </div>
+              <div v-else class="no-exercises-msg">
+                No exercises added yet
+              </div>
             </div>
           </div>
           <div class="plan-actions">
-            <button @click="viewPlan(plan)" class="btn btn-sm btn-outline-primary">
-              <i class="fas fa-eye"></i> View
+            <button @click="editPlan(plan)" class="btn-action btn-edit" title="Edit">
+              <i class="fas fa-edit"></i>
+              <span>Edit</span>
             </button>
-            <button @click="editPlan(plan)" class="btn btn-sm btn-outline-secondary">
-              <i class="fas fa-edit"></i> Edit
-            </button>
-            <button @click="confirmDelete(plan)" class="btn btn-sm btn-outline-danger">
-              <i class="fas fa-trash"></i> Delete
+            <button @click="confirmDelete(plan)" class="btn-action btn-delete-action" title="Delete">
+              <i class="fas fa-trash"></i>
+              <span>Delete</span>
             </button>
           </div>
         </div>
@@ -39,14 +57,21 @@
     </div>
 
     <!-- Add/Edit Plan Modal -->
-    <div v-if="showPlanModal" class="modal" @click.self="closeModal">
-      <div class="modal-content">
+    <div v-if="showPlanModal" class="modal-overlay" @click.self="closeModal">
+      <div class="modal-container">
         <div class="modal-header">
-          <h3>{{ isEditing ? 'Edit' : 'Add New' }} Exercise Plan</h3>
-          <button @click="closeModal" class="close-btn">&times;</button>
+          <div>
+            <h2>{{ isEditing ? 'Edit Plan' : 'Create New Plan' }}</h2>
+            <p class="modal-subtitle">Design a custom training plan</p>
+          </div>
+          <button @click="closeModal" class="btn-close">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
+
         <div class="modal-body">
           <form @submit.prevent="savePlan">
+            <!-- Plan Name -->
             <div class="form-group">
               <label for="planName">Plan Name</label>
               <input 
@@ -58,6 +83,8 @@
                 placeholder="Enter plan name"
               >
             </div>
+
+            <!-- Description -->
             <div class="form-group">
               <label for="planDescription">Description</label>
               <textarea 
@@ -68,42 +95,105 @@
                 placeholder="Enter plan description"
               ></textarea>
             </div>
-            
+
+            <!-- Exercises Section -->
             <div class="form-group">
               <label>Exercises</label>
-              <div v-if="availableExercises.length === 0" class="no-exercises">
-                No exercises available. Please add exercises first.
-              </div>
-              <div v-else class="exercises-list">
-                <div 
-                  v-for="exercise in availableExercises" 
-                  :key="exercise.id"
-                  class="exercise-item"
+              
+              <!-- Add Exercise Row -->
+              <div class="add-exercise-row">
+                <select 
+                  v-model="selectedExerciseId" 
+                  class="form-control exercise-select"
                 >
-                  <label class="exercise-checkbox">
-                    <input 
-                      type="checkbox" 
-                      :value="exercise.id" 
-                      v-model="selectedExercises"
+                  <option value="">Select exercise to add</option>
+                  <option 
+                    v-for="exercise in availableExercises" 
+                    :key="exercise.id" 
+                    :value="exercise.id"
+                  >
+                    {{ exercise.name }} - {{ exercise.category }}
+                  </option>
+                </select>
+                <button 
+                  type="button" 
+                  @click="addExerciseToPlan" 
+                  :disabled="!selectedExerciseId"
+                  class="btn-add"
+                >
+                  <i class="fas fa-plus"></i> Add
+                </button>
+              </div>
+
+              <!-- Added Exercises List with Inline Editing -->
+              <div class="added-exercises">
+                <div v-if="planExercises.length === 0" class="empty-state">
+                  No exercises added yet. Select an exercise above to get started.
+                </div>
+                <div v-else class="exercises-list">
+                  <div 
+                    v-for="(item, index) in planExercises" 
+                    :key="index"
+                    class="exercise-item-inline"
+                  >
+                    <div class="exercise-info-left">
+                      <div class="exercise-name-main">{{ getExerciseName(item.exercise_id) }}</div>
+                      <div class="exercise-category">{{ getExerciseCategory(item.exercise_id) }}</div>
+                    </div>
+                    
+                    <div class="exercise-inputs">
+                      <div class="input-group">
+                        <label>Sets</label>
+                        <input 
+                          type="number" 
+                          v-model.number="item.sets" 
+                          class="form-control-sm"
+                          min="1"
+                          placeholder="3"
+                        >
+                      </div>
+                      
+                      <div class="input-group">
+                        <label>Reps</label>
+                        <input 
+                          type="text" 
+                          v-model="item.reps" 
+                          class="form-control-sm"
+                          placeholder="10"
+                        >
+                      </div>
+                      
+                      <div class="input-group">
+                        <label>Weight (lbs)</label>
+                        <input 
+                          type="number" 
+                          v-model.number="item.weight" 
+                          class="form-control-sm"
+                          placeholder="0"
+                        >
+                      </div>
+                    </div>
+
+                    <button 
+                      type="button" 
+                      @click="removeExercise(index)" 
+                      class="btn-delete"
+                      title="Remove"
                     >
-                    <span class="checkmark"></span>
-                    <span class="exercise-name">{{ exercise.name }}</span>
-                    <span class="exercise-category">{{ exercise.category }}</span>
-                  </label>
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-            
+
+            <!-- Form Actions -->
             <div class="form-actions">
-              <button 
-                type="button" 
-                @click="closeModal" 
-                class="btn btn-outline-secondary"
-              >
+              <button type="button" @click="closeModal" class="btn-secondary">
                 Cancel
               </button>
-              <button type="submit" class="btn btn-primary">
-                {{ isEditing ? 'Update' : 'Create' }} Plan
+              <button type="submit" class="btn-primary">
+                Save Plan
               </button>
             </div>
           </form>
@@ -111,76 +201,24 @@
       </div>
     </div>
 
-    <!-- View Plan Modal -->
-    <div v-if="viewingPlan" class="modal" @click.self="viewingPlan = null">
-      <div class="modal-content view-plan">
-        <div class="modal-header">
-          <h3>{{ viewingPlan.name }}</h3>
-          <button @click="viewingPlan = null" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="plan-details">
-            <p class="plan-description" v-if="viewingPlan.description">
-              {{ viewingPlan.description }}
-            </p>
-            <div class="plan-meta">
-              <span><i class="fas fa-dumbbell"></i> {{ viewingPlan.exercises ? viewingPlan.exercises.length : 0 }} exercises</span>
-            </div>
-          </div>
-          
-          <div class="exercises-section">
-            <h4>Exercises in this plan:</h4>
-            <div v-if="!viewingPlan.exercises || viewingPlan.exercises.length === 0" class="no-exercises">
-              No exercises added to this plan yet.
-            </div>
-            <div v-else class="exercises-list">
-              <div 
-                v-for="(exercise, index) in viewingPlan.exercises" 
-                :key="exercise.id"
-                class="exercise-item"
-              >
-                <div class="exercise-header">
-                  <h5>{{ exercise.name }}</h5>
-                  <span class="exercise-category">{{ exercise.category }}</span>
-                </div>
-                <div class="exercise-details">
-                  <span v-if="exercise.difficulty" class="badge">
-                    {{ exercise.difficulty }}
-                  </span>
-                  <span v-if="exercise.equipmentNeeded">
-                    <i class="fas fa-tools"></i> {{ exercise.equipmentNeeded }}
-                  </span>
-                </div>
-                <div v-if="exercise.description" class="exercise-description">
-                  {{ exercise.description }}
-                </div>
-                <div v-if="exercise.instructions" class="exercise-instructions">
-                  <h6>Instructions:</h6>
-                  <p>{{ exercise.instructions }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button @click="viewingPlan = null" class="btn btn-primary">Close</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Delete Confirmation Modal -->
-    <div v-if="planToDelete" class="modal" @click.self="planToDelete = null">
-      <div class="modal-content delete-confirm">
+    <div v-if="planToDelete" class="modal-overlay" @click.self="planToDelete = null">
+      <div class="modal-container modal-small">
         <div class="modal-header">
           <h3>Delete Plan</h3>
-          <button @click="planToDelete = null" class="close-btn">&times;</button>
+          <button @click="planToDelete = null" class="btn-close">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
         <div class="modal-body">
-          <p>Are you sure you want to delete the plan "{{ planToDelete.name }}"? This action cannot be undone.</p>
+          <p class="confirm-message">
+            Are you sure you want to delete the plan <strong>"{{ planToDelete.name }}"</strong>? 
+            This action cannot be undone.
+          </p>
         </div>
         <div class="modal-footer">
-          <button @click="planToDelete = null" class="btn btn-outline-secondary">Cancel</button>
-          <button @click="deletePlan" class="btn btn-danger">Delete</button>
+          <button @click="planToDelete = null" class="btn-secondary">Cancel</button>
+          <button @click="deletePlan" class="btn-danger">Delete Plan</button>
         </div>
       </div>
     </div>
@@ -199,16 +237,15 @@ export default {
       availableExercises: [],
       loading: true,
       showPlanModal: false,
-      viewingPlan: null,
       planToDelete: null,
       isEditing: false,
+      selectedExerciseId: '',
       currentPlan: {
         id: null,
         name: '',
-        description: '',
-        exercises: []
+        description: ''
       },
-      selectedExercises: []
+      planExercises: []
     };
   },
   async created() {
@@ -223,7 +260,7 @@ export default {
         this.plans = response.data || [];
       } catch (error) {
         console.error('Error fetching exercise plans:', error);
-        this.$toast.error('Failed to load exercise plans');
+        this.$toast?.error('Failed to load exercise plans');
       } finally {
         this.loading = false;
       }
@@ -235,7 +272,7 @@ export default {
         this.availableExercises = response.data || [];
       } catch (error) {
         console.error('Error fetching exercises:', error);
-        this.$toast.error('Failed to load exercises');
+        this.$toast?.error('Failed to load exercises');
       }
     },
     
@@ -244,22 +281,34 @@ export default {
       this.currentPlan = {
         id: null,
         name: '',
-        description: '',
-        exercises: []
+        description: ''
       };
-      this.selectedExercises = [];
+      this.planExercises = [];
+      this.selectedExerciseId = '';
       this.showPlanModal = true;
     },
     
     editPlan(plan) {
       this.isEditing = true;
-      this.currentPlan = { ...plan };
-      this.selectedExercises = plan.exercises ? plan.exercises.map(ex => ex.id) : [];
+      this.currentPlan = { 
+        id: plan.id,
+        name: plan.name,
+        description: plan.description
+      };
+      
+      // Convert plan exercises to planExercises format
+      this.planExercises = plan.exercises ? plan.exercises.map(ex => {
+        const junctionData = ex.ExercisePlanItem || ex.exercise_plan_items || {};
+        return {
+          exercise_id: ex.id,
+          sets: junctionData.sets || 3,
+          reps: junctionData.reps || '10',
+          weight: junctionData.weight || 0,
+          order: junctionData.order || 0
+        };
+      }) : [];
+      
       this.showPlanModal = true;
-    },
-    
-    viewPlan(plan) {
-      this.viewingPlan = { ...plan };
     },
     
     confirmDelete(plan) {
@@ -268,135 +317,85 @@ export default {
     
     closeModal() {
       this.showPlanModal = false;
-      this.viewingPlan = null;
     },
     
-    /*async savePlan() {
-      try {
-        const planData = {
-          ...this.currentPlan,
-          exercises: this.selectedExercises
-        };
-        
-        let response;
-        if (this.isEditing) {
-          response = await ExercisePlanService.updatePlan(this.currentPlan.id, planData);
-          this.$toast.success('Plan updated successfully');
-          
-          // Update the plan in the list immediately
-          const index = this.plans.findIndex(p => p.id === this.currentPlan.id);
-          if (index !== -1 && response.data) {
-            this.plans[index] = {
-              ...response.data,
-              exercises: this.availableExercises.filter(ex => 
-                this.selectedExercises.includes(ex.id)
-              )
-            };
-          }
-        } else {
-          response = await ExercisePlanService.createPlan(planData);
-          this.$toast.success('Plan created successfully');
-          
-          // Add the new plan to the list immediately
-          if (response.data) {
-            const newPlan = {
-              ...response.data,
-              exercises: this.availableExercises.filter(ex => 
-                this.selectedExercises.includes(ex.id)
-              )
-            };
-            this.plans.push(newPlan);
-          }
-        }
-        
-        // Close modal immediately
-        this.showPlanModal = false;
-        
-        // Fetch plans in background to ensure sync
-        this.fetchPlans();
-      } catch (error) {
-        console.error('Error saving plan:', error);
-        this.$toast.error(`Failed to ${this.isEditing ? 'update' : 'create'} plan`);
+    addExerciseToPlan() {
+      if (!this.selectedExerciseId) return;
+      
+      // Check if exercise already added
+      const alreadyAdded = this.planExercises.some(
+        item => item.exercise_id === parseInt(this.selectedExerciseId)
+      );
+      
+      if (alreadyAdded) {
+        this.$toast?.warning('This exercise is already added to the plan');
+        return;
       }
-    },*/
+      
+      // Add exercise with default values
+      this.planExercises.push({
+        exercise_id: parseInt(this.selectedExerciseId),
+        sets: 3,
+        reps: '10',
+        weight: 0,
+        order: this.planExercises.length
+      });
+      
+      // Reset selection
+      this.selectedExerciseId = '';
+    },
+    
+    removeExercise(index) {
+      this.planExercises.splice(index, 1);
+      // Update order
+      this.planExercises.forEach((item, idx) => {
+        item.order = idx;
+      });
+    },
+    
+    getExerciseName(exerciseId) {
+      const exercise = this.availableExercises.find(ex => ex.id === parseInt(exerciseId));
+      return exercise ? exercise.name : 'Unknown Exercise';
+    },
+    
+    getExerciseCategory(exerciseId) {
+      const exercise = this.availableExercises.find(ex => ex.id === parseInt(exerciseId));
+      return exercise ? exercise.category : '';
+    },
+    
     async savePlan() {
       try {
         const planData = {
-          ...this.currentPlan,
-          exercises: this.selectedExercises
+          name: this.currentPlan.name,
+          description: this.currentPlan.description,
+          exercises: this.planExercises
         };
         
-        let response;
         if (this.isEditing) {
-          response = await ExercisePlanService.updatePlan(this.currentPlan.id, planData);
-          this.$toast.success('Plan updated successfully');
-          
-          // Update the plan in the list immediately
-          const index = this.plans.findIndex(p => p.id === this.currentPlan.id);
-          if (index !== -1) {
-            const updatedPlan = {
-              ...(response.data || response),
-              exercises: this.availableExercises.filter(ex => 
-                this.selectedExercises.includes(ex.id)
-              )
-            };
-            this.$set(this.plans, index, updatedPlan);
-          }
+          await ExercisePlanService.updatePlan(this.currentPlan.id, planData);
+          this.$toast?.success('Plan updated successfully');
         } else {
-          response = await ExercisePlanService.createPlan(planData);
-          this.$toast.success('Plan created successfully');
-          
-          // Add the new plan to the list immediately
-          const planResponse = response.data || response;
-          console.log('Response:', planResponse); // Keep this to debug
-          
-          const newPlan = {
-            id: planResponse.id || planResponse._id || Date.now(),
-            name: planData.name,
-            description: planData.description,
-            exercises: this.availableExercises.filter(ex => 
-              this.selectedExercises.includes(ex.id)
-            ),
-            ...planResponse
-          };
-          
-          // Use Vue's reactive method to ensure UI updates
-          this.plans = [...this.plans, newPlan];
-          console.log('Plans after adding:', this.plans); // Keep this to debug
+          await ExercisePlanService.createPlan(planData);
+          this.$toast?.success('Plan created successfully');
         }
         
-        // Close modal immediately
         this.showPlanModal = false;
-        
-        // Fetch plans in background to ensure sync (no await)
-        this.fetchPlans();
+        await this.fetchPlans();
       } catch (error) {
         console.error('Error saving plan:', error);
-        this.$toast.error(`Failed to ${this.isEditing ? 'update' : 'create'} plan`);
+        this.$toast?.error(`Failed to ${this.isEditing ? 'update' : 'create'} plan`);
       }
     },
-        
+    
     async deletePlan() {
-      if (!this.planToDelete) return;
-      
-      const planId = this.planToDelete.id;
-      
       try {
-        // Remove from list immediately
-        this.plans = this.plans.filter(p => p.id !== planId);
+        await ExercisePlanService.deletePlan(this.planToDelete.id);
+        this.$toast?.success('Plan deleted successfully');
         this.planToDelete = null;
-        
-        // Delete from server
-        await ExercisePlanService.deletePlan(planId);
-        this.$toast.success('Plan deleted successfully');
-        
-        // Sync with server in background
-        this.fetchPlans();
+        await this.fetchPlans();
       } catch (error) {
         console.error('Error deleting plan:', error);
-        this.$toast.error('Failed to delete plan');
-        // Refetch to restore the plan if delete failed
-        await this.fetchPlans();
+        this.$toast?.error('Failed to delete plan');
       }
     }
   }
@@ -404,320 +403,592 @@ export default {
 </script>
 
 <style scoped>
-.admin-exercise-plans {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+* {
+  box-sizing: border-box;
 }
 
+.admin-exercise-plans {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: #fafafa;
+  min-height: 100vh;
+}
+
+/* Header */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 2rem;
 }
 
+.header h1 {
+  margin: 0 0 0.25rem 0;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.subtitle {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.btn-create {
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+}
+
+.btn-create:hover {
+  background: #333;
+}
+
+/* Plans Grid */
 .plans-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
 }
 
 .plan-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  border-radius: 12px;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s;
 }
 
 .plan-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
 }
 
 .plan-header {
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .plan-header h3 {
   margin: 0;
-  font-size: 1.2rem;
-  color: #333;
-}
-
-.difficulty {
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  text-transform: capitalize;
-}
-
-.difficulty.beginner {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.difficulty.intermediate {
-  background-color: #fff3cd;
-  color: #856404;
-}
-
-.difficulty.advanced {
-  background-color: #f8d7da;
-  color: #721c24;
+  color: #1a1a1a;
 }
 
 .plan-body {
-  padding: 15px;
+  padding: 1.25rem;
 }
 
 .description {
   color: #666;
-  margin-bottom: 15px;
   font-size: 0.9rem;
   line-height: 1.5;
+  margin-bottom: 1rem;
 }
 
-.plan-meta {
+.exercises-preview {
+  margin-top: 1rem;
+}
+
+.exercise-list {
   display: flex;
-  gap: 15px;
-  font-size: 0.85rem;
-  color: #6c757d;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.plan-meta i {
-  margin-right: 5px;
+.exercise-preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: #f9f9f9;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.exercise-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.exercise-meta {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.more-exercises {
+  padding: 0.5rem;
+  text-align: center;
+  color: #666;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.no-exercises-msg {
+  color: #999;
+  font-size: 0.85rem;
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
 }
 
 .plan-actions {
-  padding: 10px 15px;
-  border-top: 1px solid #eee;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #f0f0f0;
   display: flex;
-  gap: 10px;
+  gap: 0.75rem;
   justify-content: flex-end;
 }
 
-/* Modal styles */
-.modal {
+.btn-action {
+  background: none;
+  border: 1px solid #e0e0e0;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.btn-action i {
+  font-size: 0.9rem;
+}
+
+.btn-edit:hover {
+  background: #e8f4f8;
+  border-color: #90caf9;
+  color: #1976d2;
+}
+
+.btn-delete-action {
+  color: #999;
+}
+
+.btn-delete-action:hover {
+  background: #fee;
+  border-color: #fcc;
+  color: #d32f2f;
+}
+
+/* Modal */
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 1rem;
 }
 
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
+.modal-container {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
   max-width: 700px;
   max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-container.modal-small {
+  max-width: 500px;
 }
 
 .modal-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #eee;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #f0f0f0;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 10;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+.modal-header h2 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a1a;
 }
 
-.close-btn {
+.modal-subtitle {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: normal;
+}
+
+.btn-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
   cursor: pointer;
-  color: #6c757d;
-  padding: 0 5px;
-  line-height: 1;
+  color: #666;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 }
 
-.close-btn:hover {
-  color: #343a40;
+.btn-close:hover {
+  background: #f5f5f5;
+  color: #333;
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 2rem;
+  overflow-y: auto;
+  flex: 1;
 }
 
+.modal-footer {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+/* Form Styles */
 .form-group {
   margin-bottom: 1.5rem;
 }
 
-.form-actions {
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 0.95rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e8e8e8;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  font-family: inherit;
+  background: #fafafa;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #000;
+  background: #fff;
+}
+
+.form-control::placeholder {
+  color: #999;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Add Exercise Row */
+.add-exercise-row {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 2rem;
-  padding-top: 15px;
-  border-top: 1px solid #eee;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
-/* Exercises list */
-.exercises-list {
-  max-height: 300px;
-  overflow-y: auto;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  padding: 10px;
+.exercise-select {
+  flex: 1;
 }
 
-.exercise-item {
-  padding: 10px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.exercise-item:last-child {
-  border-bottom: none;
-}
-
-.exercise-checkbox {
+.btn-add {
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  cursor: pointer;
+  gap: 0.5rem;
+  transition: background 0.2s;
+  white-space: nowrap;
 }
 
-.exercise-name {
-  margin-left: 10px;
-  font-weight: 500;
+.btn-add:hover:not(:disabled) {
+  background: #333;
 }
 
-.exercise-category {
-  margin-left: 10px;
-  font-size: 0.8rem;
-  color: #6c757d;
-  background: #f8f9fa;
-  padding: 2px 8px;
-  border-radius: 10px;
+.btn-add:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
-/* View plan modal */
-.view-plan .plan-details {
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+/* Added Exercises - Inline Editing */
+.added-exercises {
+  border: 2px solid #e8e8e8;
+  border-radius: 12px;
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: #fafafa;
 }
 
-.view-plan .plan-description {
-  color: #495057;
+.empty-state {
+  padding: 3rem 2rem;
+  text-align: center;
+  color: #999;
+  font-size: 0.9rem;
   line-height: 1.6;
 }
 
-.view-plan .exercises-section {
-  margin-top: 20px;
+.exercises-list {
+  padding: 1rem;
 }
 
-.view-plan .exercises-section h4 {
-  margin-bottom: 15px;
-  color: #495057;
-}
-
-.view-plan .exercise-item {
-  background: #f8f9fa;
-  border-radius: 6px;
-  padding: 15px;
-  margin-bottom: 15px;
-}
-
-.view-plan .exercise-header {
+.exercise-item-inline {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  gap: 1rem;
+  padding: 1rem;
+  background: #fff;
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
 }
 
-.view-plan .exercise-header h5 {
-  margin: 0;
-  color: #212529;
+.exercise-item-inline:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-.view-plan .exercise-details {
+.exercise-item-inline:last-child {
+  margin-bottom: 0;
+}
+
+.exercise-info-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.exercise-name-main {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.exercise-category {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.exercise-inputs {
   display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-  font-size: 0.85rem;
-  color: #6c757d;
+  gap: 0.75rem;
+  align-items: flex-end;
 }
 
-.view-plan .exercise-details i {
-  margin-right: 3px;
+.input-group {
+  display: flex;
+  flex-direction: column;
 }
 
-.view-plan .exercise-description,
-.view-plan .exercise-instructions {
+.input-group label {
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.form-control-sm {
+  width: 70px;
+  padding: 0.5rem;
+  border: 2px solid #e8e8e8;
+  border-radius: 6px;
   font-size: 0.9rem;
-  color: #495057;
-  line-height: 1.5;
-  margin-bottom: 10px;
-}
-
-.view-plan .exercise-instructions h6 {
-  margin: 10px 0 5px;
-  font-size: 0.9rem;
-  color: #343a40;
-}
-
-/* Delete confirmation modal */
-.delete-confirm {
-  max-width: 500px;
-}
-
-.delete-confirm .modal-body {
   text-align: center;
-  padding: 30px 20px;
+  font-family: inherit;
+  background: #fafafa;
+  transition: all 0.2s;
 }
 
-.delete-confirm .modal-footer {
+.form-control-sm:focus {
+  outline: none;
+  border-color: #000;
+  background: #fff;
+}
+
+.btn-delete {
+  background: none;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #999;
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 15px;
-  padding: 15px 20px;
-  border-top: 1px solid #eee;
+  transition: all 0.2s;
+  flex-shrink: 0;
 }
 
-/* Loading and empty states */
-.loading,
-.no-plans,
-.no-exercises {
+.btn-delete:hover {
+  background: #fee;
+  color: #d32f2f;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background: #000;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #333;
+}
+
+.btn-secondary {
+  background: #fff;
+  color: #333;
+  border: 2px solid #e0e0e0;
+}
+
+.btn-secondary:hover {
+  background: #f5f5f5;
+  border-color: #d0d0d0;
+}
+
+.btn-danger {
+  background: #d32f2f;
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #b71c1c;
+}
+
+/* Confirm Message */
+.confirm-message {
   text-align: center;
-  padding: 40px 20px;
-  color: #6c757d;
-  font-style: italic;
+  padding: 1rem 0;
+  color: #666;
+  line-height: 1.6;
 }
 
-/* Responsive adjustments */
+.confirm-message strong {
+  color: #333;
+}
+
+/* Loading and Empty States */
+.loading,
+.no-plans {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #999;
+  font-size: 1rem;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
+  .admin-exercise-plans {
+    padding: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
   .plans-grid {
     grid-template-columns: 1fr;
   }
-  
-  .modal-content {
-    width: 95%;
+
+  .modal-container {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .add-exercise-row {
+    flex-direction: column;
+  }
+
+  .btn-add {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .exercise-item-inline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .exercise-inputs {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .btn-delete {
+    align-self: flex-end;
   }
 }
 </style>
