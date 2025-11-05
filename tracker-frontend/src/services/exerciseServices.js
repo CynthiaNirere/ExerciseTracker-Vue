@@ -2,12 +2,10 @@ import apiClient from "./services";
 
 export default {
   // ========================================
-  // Exercise Results (NEW - Athlete-specific)
+  // Exercise Results (Athlete-specific)
   // ========================================
   
-  // Get exercise results for logged-in athlete
   getExerciseResultsByAthlete(athleteId) {
-    // If athleteId is not provided, get it from stored user
     const userId = athleteId || JSON.parse(localStorage.getItem('user'))?.userId;
     if (!userId) {
       return Promise.reject(new Error('User ID not found'));
@@ -15,7 +13,6 @@ export default {
     return apiClient.get(`/exercises/athlete/${userId}`);
   },
 
-  // Record new exercise result
   recordExerciseResult(data) {
     const payload = {
       athleteId: data.athleteId,
@@ -28,13 +25,11 @@ export default {
       notes: data.notes || null
     };
     
-    console.log('Recording exercise result:', payload); // Debug log
+    console.log('Recording exercise result:', payload);
     return apiClient.post("/exercises", payload);
   },
 
-  // Get athlete statistics
   getAthleteStatistics(athleteId) {
-    // If athleteId is not provided, get it from stored user
     const userId = athleteId || JSON.parse(localStorage.getItem('user'))?.userId;
     if (!userId) {
       return Promise.reject(new Error('User ID not found'));
@@ -43,59 +38,49 @@ export default {
   },
 
   // ========================================
-  // Exercise Management (for admin/coach)
+  // Exercise Management (Admin)
   // ========================================
   
-  // Get all exercises
   getAllExercises() {
-    return apiClient.get("/exercises/list"); // Updated to match route
+    return apiClient.get("/exercises/list");
   },
 
-  // Get a single exercise by ID
   getExerciseById(id) {
-    return apiClient.get(`/exercises/${id}`); // Fixed syntax
+    return apiClient.get(`/exercises/exercise/${id}`);
   },
 
-  // Create a new exercise
   createExercise(data) {
-    return apiClient.post("/exercises", data);
+    return apiClient.post("/exercises/manage", data);
   },
 
-  // Update an exercise
   updateExercise(id, data) {
-    return apiClient.put(`/exercises/${id}`, data); // Fixed syntax
+    return apiClient.put(`/exercises/manage/${id}`, data);
   },
 
-  // Delete an exercise
   deleteExercise(id) {
-    return apiClient.delete(`/exercises/${id}`); // Fixed syntax
+    return apiClient.delete(`/exercises/manage/${id}`);
   },
 
   // ========================================
-  // Legacy methods (keeping for compatibility)
+  // Legacy methods
   // ========================================
   
-  // Create exercise result (directly use provided data)
   create(data) {
     return apiClient.post("/exercises", data);
   },
 
-  // Find exercise results by athlete ID
   findByAthlete(athleteId) {
-    return apiClient.get(`/exercises/athlete/${athleteId}`); // Fixed syntax
+    return apiClient.get(`/exercises/athlete/${athleteId}`);
   },
 
-  // Get all exercise results (old method)
   getAllExerciseResults() {
     return apiClient.get("/exercises");
   },
 
-  // Get exercise results by ID (old method)
   getExerciseResultById(id) {
-    return apiClient.get(`/exercises/${id}`); // Fixed syntax
+    return apiClient.get(`/exercises/${id}`);
   },
 
-  // Update an exercise result (old method)
   updateExerciseResult(id, data) {
     const payload = {
       performedDate: data.date,
@@ -105,16 +90,14 @@ export default {
       durationSeconds: data.duration ? data.duration * 60 : null,
       notes: data.notes
     };
-    return apiClient.put(`/exercises/${id}`, payload); // Fixed syntax
+    return apiClient.put(`/exercises/${id}`, payload);
   },
 
-  // Delete an exercise result (old method)
   deleteExerciseResult(id) {
-    return apiClient.delete(`/exercises/${id}`); // Fixed syntax
+    return apiClient.delete(`/exercises/${id}`);
   },
 
-  // Get exercise statistics for an athlete (old method)
   getExerciseStatistics(athleteId) {
-    return apiClient.get(`/exercises/athlete/${athleteId}/statistics`); // Fixed syntax
+    return apiClient.get(`/exercises/athlete/${athleteId}/statistics`);
   }
 };

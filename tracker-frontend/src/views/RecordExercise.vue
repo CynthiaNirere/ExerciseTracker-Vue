@@ -120,7 +120,7 @@ const cancel = () => {
 };
 
 const viewResults = () => {
-  router.push({ name: "exerciseResults" });
+  router.push({ name: "viewExerciseResults" });
 };
 
 onMounted(() => {

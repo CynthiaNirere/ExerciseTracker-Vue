@@ -6,6 +6,7 @@ import { useRouter } from "vue-router";
 
 const router = useRouter();
 const valid = ref(true);
+const editValid = ref(true);
 const user = ref(null);
 const goals = ref([]);
 const loading = ref(true);
@@ -71,6 +72,11 @@ const targetDateRules = [
     today.setHours(0, 0, 0, 0);
     return selectedDate >= today || 'Target date must be today or in the future';
   }
+];
+
+// Edit validation rules (no date restriction)
+const editTargetDateRules = [
+  v => !!v || 'Target date is required'
 ];
 
 // Table headers
@@ -215,21 +221,44 @@ const updateGoal = async () => {
     return;
   }
 
-  // Validate required fields
-  if (!selectedGoal.value.title || !selectedGoal.value.targetValue || !selectedGoal.value.unit || !selectedGoal.value.targetDate) {
-    message.value = "Error: Please fill in all required fields";
+  // Basic validation for required fields
+  if (!selectedGoal.value.title?.trim()) {
+    message.value = "Error: Title is required";
     return;
   }
 
-  // Validate target value
+  if (selectedGoal.value.title.length > 100) {
+    message.value = "Error: Title must be less than 100 characters";
+    return;
+  }
+
+  if (selectedGoal.value.targetValue === null || selectedGoal.value.targetValue === '') {
+    message.value = "Error: Target value is required";
+    return;
+  }
+
   if (selectedGoal.value.targetValue <= 0) {
     message.value = "Error: Target value must be greater than 0";
     return;
   }
 
-  // Validate current value
+  if (selectedGoal.value.currentValue === null || selectedGoal.value.currentValue === '') {
+    message.value = "Error: Current value is required";
+    return;
+  }
+
   if (selectedGoal.value.currentValue < 0) {
     message.value = "Error: Current value cannot be negative";
+    return;
+  }
+
+  if (!selectedGoal.value.unit) {
+    message.value = "Error: Unit is required";
+    return;
+  }
+
+  if (!selectedGoal.value.targetDate) {
+    message.value = "Error: Target date is required";
     return;
   }
   
@@ -494,11 +523,10 @@ onMounted(() => {
           <span class="text-h5">Edit Goal</span>
         </v-card-title>
         <v-card-text>
-          <v-form v-model="valid">
+          <v-form v-model="editValid">
             <v-text-field
               v-model="selectedGoal.title"
               label="Title *"
-              :rules="titleRules"
               :counter="100"
               required
             ></v-text-field>
@@ -515,7 +543,6 @@ onMounted(() => {
                   v-model.number="selectedGoal.targetValue"
                   label="Target Value *"
                   type="number"
-                  :rules="targetValueRules"
                   required
                   min="1"
                   step="0.01"
@@ -526,7 +553,6 @@ onMounted(() => {
                   v-model.number="selectedGoal.currentValue"
                   label="Current Value *"
                   type="number"
-                  :rules="currentValueRules"
                   required
                   min="0"
                   step="0.01"
@@ -540,7 +566,6 @@ onMounted(() => {
               item-title="title"
               item-value="value"
               label="Unit *"
-              :rules="unitRules"
               required
             ></v-select>
             
@@ -548,7 +573,6 @@ onMounted(() => {
               v-model="selectedGoal.targetDate"
               label="Target Date *"
               type="date"
-              :rules="targetDateRules"
               required
             ></v-text-field>
             
@@ -571,7 +595,6 @@ onMounted(() => {
           <v-btn color="error" @click="cancelEdit">Cancel</v-btn>
           <v-btn
             color="success"
-            :disabled="!valid"
             @click="updateGoal"
           >
             Update

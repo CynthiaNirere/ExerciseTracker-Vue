@@ -7,6 +7,8 @@ import Login from "./views/Login.vue";
 // Admin Views
 import AdminDashboard from "./views/AdminDashboard.vue";
 import AdminUsers from "./views/AdminUsers.vue";
+import AdminExercises from "./views/AdminExercises.vue";
+import AdminExercisePlans from "./views/AdminExercisePlans.vue";
 
 // Athlete Views
 import AthleteDashboard from "./views/AthleteDashboard.vue";
@@ -48,6 +50,12 @@ const router = createRouter({
       component: AdminUsers,
       meta: { requiresAuth: true, role: "admin" },
     },
+    {
+      path: "/admin/exercises",
+      name: "exerciseManagement",
+      component: AdminExercises,
+      meta: { requiresAuth: true, role: "admin" },
+    },
 
     // ========================================
     // Athlete Routes
@@ -87,6 +95,12 @@ const router = createRouter({
       name: "viewProgress",
       component: ViewProgress,
       meta: { requiresAuth: true, role: "athlete" },
+    },
+    {
+      path: "/admin/exercise-plans",
+      name: "exercisePlansManagement",
+      component: AdminExercisePlans,
+      meta: { requiresAuth: true, role: "admin" },
     },
 
     // ========================================

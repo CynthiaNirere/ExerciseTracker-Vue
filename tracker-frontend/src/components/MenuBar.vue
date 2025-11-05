@@ -79,6 +79,9 @@ onMounted(() => {
       <v-btn class="mx-2" :to="{ name: 'userManagement' }" variant="text">
         Users
       </v-btn>
+      <v-btn class="mx-2" :to="{ name: 'exerciseManagement' }" variant="text">
+        Exercises
+      </v-btn>
     </template>
 
     <!-- Athlete Menu -->
