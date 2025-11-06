@@ -5,9 +5,9 @@ import Router from "../router.js";
 // Use environment variable for API URL
 var baseurl = "";
 if (import.meta.env.DEV) {
-  baseurl = import.meta.env.VITE_APP_API_URL || "http://localhost:3021/tracker-t1/";
+  baseurl = import.meta.env.VITE_APP_API_URL || "http://localhost:3021/tracker-t1/api/";
 } else {
-  baseurl = "/tracker-t1/";
+   baseurl = "/tracker-t1/api/";
 }
 
 const apiClient = axios.create({

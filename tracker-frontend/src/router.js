@@ -18,6 +18,12 @@ import AthleteGoals from "./views/AthleteGoals.vue";
 import ViewExerciseResults from "./views/ViewExerciseResults.vue";
 import ViewProgress from "./views/ViewProgress.vue";
 
+// Coach Views
+import CoachDashboard from "./views/CoachDashboard.vue";
+import CoachExercises from "./views/CoachExercises.vue";
+import CoachPlans from "./views/CoachPlans.vue";
+import AthleteDetail from "./views/AthleteDetails.vue";
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -55,6 +61,40 @@ const router = createRouter({
       name: "exerciseManagement",
       component: AdminExercises,
       meta: { requiresAuth: true, role: "admin" },
+    },
+    {
+      path: "/admin/exercise-plans",
+      name: "exercisePlansManagement",
+      component: AdminExercisePlans,
+      meta: { requiresAuth: true, role: "admin" },
+    },
+
+    // ========================================
+    // Coach Routes
+    // ========================================
+    {
+      path: "/coach/dashboard",
+      name: "coachDashboard",
+      component: CoachDashboard,
+      meta: { requiresAuth: true, role: "coach" },
+    },
+    {
+      path: "/coach/exercises",
+      name: "coach-exercises",
+      component: CoachExercises,
+      meta: { requiresAuth: true, role: "coach" },
+    },
+    {
+      path: "/coach/plans",
+      name: "coach-plans",
+      component: CoachPlans,
+      meta: { requiresAuth: true, role: "coach" },
+    },
+    {
+      path: "/coach/athlete/:id",
+      name: "athleteDetail",
+      component: AthleteDetail,
+      meta: { requiresAuth: true, role: "coach" },
     },
 
     // ========================================
@@ -96,12 +136,6 @@ const router = createRouter({
       component: ViewProgress,
       meta: { requiresAuth: true, role: "athlete" },
     },
-    {
-      path: "/admin/exercise-plans",
-      name: "exercisePlansManagement",
-      component: AdminExercisePlans,
-      meta: { requiresAuth: true, role: "admin" },
-    },
 
     // ========================================
     // 404 - Catch All
@@ -138,7 +172,7 @@ router.beforeEach((to, from, next) => {
     } else if (user.role === "athlete") {
       next({ name: "athleteDashboard" });
     } else if (user.role === "coach") {
-      next({ name: "coachDashboard" }); // Add coach dashboard when ready
+      next({ name: "coachDashboard" });
     } else {
       next({ name: "login" });
     }
@@ -152,7 +186,7 @@ router.beforeEach((to, from, next) => {
     } else if (user.role === "athlete") {
       next({ name: "athleteDashboard" });
     } else if (user.role === "coach") {
-      next({ name: "coachDashboard" }); // Add coach dashboard when ready
+      next({ name: "coachDashboard" });
     } else {
       next();
     }

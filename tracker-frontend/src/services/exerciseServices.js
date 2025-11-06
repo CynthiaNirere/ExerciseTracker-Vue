@@ -38,7 +38,7 @@ export default {
   },
 
   // ========================================
-  // Exercise Management (Admin)
+  // Exercise Management (Admin & Coach)
   // ========================================
   
   getAllExercises() {
@@ -59,6 +59,25 @@ export default {
 
   deleteExercise(id) {
     return apiClient.delete(`/exercises/manage/${id}`);
+  },
+
+  // ========================================
+  // Coach-specific methods
+  // ========================================
+
+  // Get exercises created by a specific coach
+  getExercisesByCoach(coachId) {
+    return apiClient.get(`/exercises/coach/${coachId}`);
+  },
+
+  // Get all workout results for coach's athletes
+  getCoachAthleteResults(coachId) {
+    return apiClient.get(`/exercises/coach/${coachId}/results`);
+  },
+
+  // Get specific athlete's workout results (for coach view)
+  getAthleteResultsForCoach(athleteId) {
+    return apiClient.get(`/exercises/athlete/${athleteId}/results`);
   },
 
   // ========================================
