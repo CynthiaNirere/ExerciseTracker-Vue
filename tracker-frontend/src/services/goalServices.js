@@ -76,10 +76,6 @@ export default {
     return apiClient.get(`/goals/athlete/${athleteId}/statistics`);
   },
 
-  // ========================================
-  // Coach-specific methods
-  // ========================================
-
   // Get all goals for coach's athletes
   getGoalsByCoach(coachId) {
     return apiClient.get(`/goals/coach/${coachId}`);
