@@ -8,7 +8,7 @@ var baseurl = import.meta.env.VITE_APP_API_URL;
 // Fallback logic
 if (!baseurl) {
   if (import.meta.env.DEV) {
-    baseurl = "http://localhost:3021/tracker-t1/api/";
+    baseurl = "http://localhost:3121/tracker-t1/api/";
   } else {
     baseurl = "https://project3.eaglesoftwareteam.com/tracker-t1/api/";
   }
