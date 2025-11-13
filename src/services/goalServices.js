@@ -1,9 +1,7 @@
 import apiClient from "./services";
 
 export default {
-  // ========================================
-  // Goal Management (Athlete, Coach, Admin)
-  // ========================================
+
 
   // Create a new goal
   createGoal(data) {

@@ -1,9 +1,7 @@
 import apiClient from "./services";
 
 export default {
-  // ========================================
-  // Exercise Results (Athlete-specific)
-  // ========================================
+
   
   getExerciseResultsByAthlete(athleteId) {
     const userId = athleteId || JSON.parse(localStorage.getItem('user'))?.userId;
@@ -37,9 +35,7 @@ export default {
     return apiClient.get(`/exercises/athlete/${userId}/statistics`);
   },
 
-  // ========================================
-  // Exercise Management (Admin & Coach)
-  // ========================================
+  
   
   getAllExercises() {
     return apiClient.get("/exercises/list");
@@ -80,9 +76,7 @@ export default {
     return apiClient.get(`/exercises/athlete/${athleteId}/results`);
   },
 
-  // ========================================
-  // Legacy methods
-  // ========================================
+ 
   
   create(data) {
     return apiClient.post("/exercises", data);
