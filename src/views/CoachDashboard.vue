@@ -100,7 +100,7 @@ const fetchAthletes = async () => {
     const config = getAxiosConfig()
     if (!config) return
     
-    const url = `http://localhost:3021/tracker-t1/api/coach/${coachId}/athletes`
+    const url = `http://localhost:3121/tracker-t1/api/coach/${coachId}/athletes`
     console.log('📡 Fetching from URL:', url)
     
     const response = await axios.get(url, config)
@@ -160,7 +160,7 @@ const createAthlete = async () => {
 
     const coachId = user.value?.userId || user.value?.user_id || currentUser.value?.userId || currentUser.value?.user_id
     
-    const response = await axios.post('http://localhost:3021/tracker-t1/api/athletes', {
+    const response = await axios.post('http://localhost:3121/tracker-t1/api/athletes', {
       first_name: newAthlete.value.first_name,
       last_name: newAthlete.value.last_name,
       email: newAthlete.value.email,
