@@ -3,13 +3,18 @@ import Utils from "../config/utils.js";
 import Router from "../router.js";
 
 // Use environment variable for API URL
-var baseurl = "";
-if (import.meta.env.DEV) {
-  baseurl = import.meta.env.VITE_APP_API_URL || "http://localhost:3021/tracker-t1/api/";
-} else {
-  // FIXED: Use full URL for production instead of relative path
-  baseurl = import.meta.env.VITE_APP_API_URL || "https://project3.eaglesoftwareteam.com/tracker-t1/api/";
+var baseurl = import.meta.env.VITE_APP_API_URL;
+
+// Fallback logic
+if (!baseurl) {
+  if (import.meta.env.DEV) {
+    baseurl = "http://localhost:3021/tracker-t1/api/";
+  } else {
+    baseurl = "https://project3.eaglesoftwareteam.com/tracker-t1/api/";
+  }
 }
+
+console.log("API Base URL:", baseurl); // DEBUG: Remove this later
 
 const apiClient = axios.create({
   baseURL: baseurl,
