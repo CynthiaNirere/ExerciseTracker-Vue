@@ -12,11 +12,6 @@ on:
 jobs:
   aws-deploy:
     runs-on: ubuntu-latest
-    env:
-      VITE_APP_BASE_URL: ${{secrets.VITE_APP_BASE_URL}}
-      VITE_APP_CLIENT_ID: ${{secrets.VITE_APP_CLIENT_ID}}
-      VITE_APP_CLIENT_URL: ${{secrets.VITE_APP_CLIENT_URL}}
-      VITE_APP_API_URL: ${{secrets.VITE_APP_API_URL}}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -24,12 +19,18 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18
-      - run: |
+      
+      # CRITICAL: Create .env BEFORE building
+      - name: Create production environment file
+        run: |
           touch .env
-          echo VITE_APP_BASE_URL="$VITE_APP_BASE_URL" >> .env
-          echo VITE_APP_CLIENT_ID="$VITE_APP_CLIENT_ID" >> .env
-          echo VITE_APP_CLIENT_URL="$VITE_APP_CLIENT_URL" >> .env
-          echo VITE_APP_API_URL="$VITE_APP_API_URL" >> .env
+          echo VITE_APP_CLIENT_ID="${{ secrets.VITE_APP_CLIENT_ID }}" >> .env
+          echo VITE_APP_CLIENT_URL="${{ secrets.VITE_APP_CLIENT_URL }}" >> .env
+          echo VITE_APP_API_URL="${{ secrets.VITE_APP_API_URL }}" >> .env
+          echo VITE_APP_GOOGLE_API_URL="${{ secrets.VITE_APP_GOOGLE_API_URL }}" >> .env
+          echo "=== .env file contents ==="
+          cat .env
+          echo "=========================="
 
       - run: npm install
       - run: npm run build
