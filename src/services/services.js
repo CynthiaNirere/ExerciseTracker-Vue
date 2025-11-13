@@ -7,7 +7,8 @@ var baseurl = "";
 if (import.meta.env.DEV) {
   baseurl = import.meta.env.VITE_APP_API_URL || "http://localhost:3021/tracker-t1/api/";
 } else {
-   baseurl = "/tracker-t1/api/";
+  // FIXED: Use full URL for production instead of relative path
+  baseurl = import.meta.env.VITE_APP_API_URL || "https://project3.eaglesoftwareteam.com/tracker-t1/api/";
 }
 
 const apiClient = axios.create({
