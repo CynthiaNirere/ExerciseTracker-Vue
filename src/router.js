@@ -137,9 +137,7 @@ const router = createRouter({
       meta: { requiresAuth: true, role: "athlete" },
     },
 
-    // ========================================
-    // 404 - Catch All
-    // ========================================
+   
     {
       path: "/:pathMatch(.*)*",
       redirect: "/login",
@@ -147,9 +145,7 @@ const router = createRouter({
   ],
 });
 
-// ========================================
-// Navigation Guard (Role-Based Access)
-// ========================================
+
 router.beforeEach((to, from, next) => {
   const user = Utils.getStore("user");
   const requiresAuth = to.meta.requiresAuth;
