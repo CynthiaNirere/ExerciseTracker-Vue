@@ -1,9 +1,6 @@
 import apiClient from "./services";
 
 export default {
-  // ========================================
-  // Exercise Plans (Admin, Coach, Athlete)
-  // ========================================
 
   // Get all exercise plans
   getAllExercisePlans() {
@@ -40,9 +37,7 @@ export default {
     return apiClient.get(`/exercise-plans/difficulty/${difficulty}`);
   },
 
-  // ========================================
-  // Coach-specific methods
-  // ========================================
+  
 
   // Get plans created by a specific coach
   getPlansByCoach(coachId) {
