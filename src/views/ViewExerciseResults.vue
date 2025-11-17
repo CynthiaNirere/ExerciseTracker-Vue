@@ -9,9 +9,12 @@ const user = ref(null);
 const exerciseResults = ref([]);
 const search = ref("");
 const message = ref("");
+const messageType = ref("info");
 const loading = ref(true);
+const deleteDialog = ref(false);
+const resultToDelete = ref(null);
 
-// Table headers - Updated to match backend field names
+// Table headers - Added actions column
 const headers = [
   { title: 'Date', key: 'performedDate', sortable: true },
   { title: 'Exercise', key: 'exerciseName', sortable: true },
@@ -19,7 +22,8 @@ const headers = [
   { title: 'Reps', key: 'repsDone', sortable: true },
   { title: 'Weight (lbs)', key: 'weightUsed', sortable: true },
   { title: 'Duration (min)', key: 'durationSeconds', sortable: true },
-  { title: 'Notes', key: 'notes', sortable: false }
+  { title: 'Notes', key: 'notes', sortable: false },
+  { title: 'Actions', key: 'actions', sortable: false } // ADDED
 ];
 
 // Statistics computed properties
@@ -71,10 +75,19 @@ const formatDuration = (seconds) => {
   return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 };
 
+// Show message helper
+const showMessage = (msg, type = 'info') => {
+  message.value = msg;
+  messageType.value = type;
+  setTimeout(() => {
+    message.value = '';
+  }, 3000);
+};
+
 // Load exercise results
 const fetchExerciseResults = async () => {
   if (!user.value || !user.value.userId) {
-    message.value = "Error: User not logged in";
+    showMessage("Error: User not logged in", "error");
     router.push({ name: "login" });
     return;
   }
@@ -83,14 +96,12 @@ const fetchExerciseResults = async () => {
     loading.value = true;
     console.log("Fetching exercise results for user:", user.value.userId);
     
-    // Pass the athleteId to the service
     const response = await ExerciseServices.getExerciseResultsByAthlete(user.value.userId);
     console.log("Exercise results raw response:", response.data);
     
-    // Check if response has data
     if (!response.data || !Array.isArray(response.data)) {
       exerciseResults.value = [];
-      message.value = "No exercise results found";
+      showMessage("No exercise results found", "info");
       loading.value = false;
       return;
     }
@@ -112,18 +123,39 @@ const fetchExerciseResults = async () => {
     console.log("Mapped exercise results:", exerciseResults.value);
     
     if (exerciseResults.value.length === 0) {
-      message.value = "No exercise results found. Start recording your workouts!";
+      showMessage("No exercise results found. Start recording your workouts!", "info");
     } else {
       message.value = "";
     }
     
     loading.value = false;
   } catch (error) {
-    message.value = "Error loading exercise results: " + (error.response?.data?.message || error.message);
+    showMessage("Error loading exercise results: " + (error.response?.data?.message || error.message), "error");
     console.error("Error fetching exercise results:", error);
-    console.error("Error details:", error.response?.data);
     exerciseResults.value = [];
     loading.value = false;
+  }
+};
+
+// Confirm delete
+const confirmDelete = (result) => {
+  resultToDelete.value = result;
+  deleteDialog.value = true;
+};
+
+// Delete exercise result
+const deleteExerciseResult = async () => {
+  if (!resultToDelete.value) return;
+  
+  try {
+    await ExerciseServices.deleteExerciseResult(resultToDelete.value.id);
+    showMessage("Exercise result deleted successfully", "success");
+    deleteDialog.value = false;
+    resultToDelete.value = null;
+    await fetchExerciseResults(); // Refresh the list
+  } catch (error) {
+    showMessage("Error deleting exercise result: " + (error.response?.data?.message || error.message), "error");
+    console.error("Error deleting result:", error);
   }
 };
 
@@ -161,7 +193,7 @@ onMounted(() => {
     <!-- Message Display -->
     <v-alert
       v-if="message"
-      :type="message.includes('Error') ? 'error' : 'info'"
+      :type="messageType"
       closable
       @click:close="message = ''"
     >
@@ -237,6 +269,18 @@ onMounted(() => {
           <span v-else>-</span>
         </template>
 
+        <!-- Actions Column - ADDED -->
+        <template v-slot:item.actions="{ item }">
+          <v-btn
+            icon
+            size="small"
+            color="error"
+            @click="confirmDelete(item.raw || item)"
+          >
+            <v-icon>mdi-delete</v-icon>
+          </v-btn>
+        </template>
+
         <!-- Empty state -->
         <template v-slot:no-data>
           <v-alert type="info" class="ma-4">
@@ -281,6 +325,26 @@ onMounted(() => {
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- Delete Confirmation Dialog - ADDED -->
+    <v-dialog v-model="deleteDialog" max-width="500">
+      <v-card v-if="resultToDelete">
+        <v-card-title>Delete Exercise Result</v-card-title>
+        <v-card-text>
+          Are you sure you want to delete this exercise result?
+          <br><br>
+          <strong>Exercise:</strong> {{ resultToDelete.exerciseName }}<br>
+          <strong>Date:</strong> {{ formatDate(resultToDelete.performedDate) }}<br>
+          <br>
+          This action cannot be undone.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
+          <v-btn color="error" variant="flat" @click="deleteExerciseResult">Delete</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 

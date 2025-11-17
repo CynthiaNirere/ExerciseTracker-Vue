@@ -106,10 +106,9 @@ export default {
     return apiClient.put(`/exercises/${id}`, payload);
   },
 
-  deleteExerciseResult(id) {
-    return apiClient.delete(`/exercises/${id}`);
-  },
-
+ deleteExerciseResult(resultId) {
+  return apiClient.delete(`/exercises/${resultId}`); // Just /exercises/:id
+},
   getExerciseStatistics(athleteId) {
     return apiClient.get(`/exercises/athlete/${athleteId}/statistics`);
   }
