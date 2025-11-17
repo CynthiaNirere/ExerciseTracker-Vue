@@ -12,12 +12,12 @@ export default {
 
   // Get specific athlete details
   getAthleteById(athleteId) {
-    return apiClient.get(`/athletes/${athleteId}`);
+    return apiClient.get(`/coach/athlete/${athleteId}`);  // ✅ FIXED
   },
 
   // Create new athlete (by coach)
   createAthlete(data) {
-    return apiClient.post("/athletes", data);
+    return apiClient.post("/coach/athletes", data);  // ✅ FIXED
   },
 
   // Update athlete profile

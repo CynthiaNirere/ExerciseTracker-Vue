@@ -160,7 +160,8 @@ const createAthlete = async () => {
 
     const coachId = user.value?.userId || user.value?.user_id || currentUser.value?.userId || currentUser.value?.user_id
     
-    const response = await axios.post('http://localhost:3121/tracker-t1/api/athletes', {
+    // ✅ FIXED: Changed URL to include /coach/
+    const response = await axios.post('http://localhost:3121/tracker-t1/api/coach/athletes', {
       first_name: newAthlete.value.first_name,
       last_name: newAthlete.value.last_name,
       email: newAthlete.value.email,
@@ -256,6 +257,15 @@ onMounted(async () => {
   console.log('📦 User from storage:', Utils.getStore("user"))
   console.log('📦 Current user from store:', currentUser.value)
   console.log('📦 Final user value:', user.value)
+  
+  // ✅ ADD THIS DEBUG CODE
+  if (user.value) {
+    console.log('🔍 All user fields:', Object.keys(user.value))
+    console.log('🔍 user.userId:', user.value.userId)
+    console.log('🔍 user.user_id:', user.value.user_id)
+    console.log('🔍 user.id:', user.value.id)
+  }
+  // END DEBUG CODE
   
   if (!user.value) {
     console.log('❌ No user found, redirecting to login')
