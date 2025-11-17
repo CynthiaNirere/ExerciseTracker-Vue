@@ -20,11 +20,21 @@ const currentUser = computed(() => {
 // Active tab
 const activeTab = ref('athletes')
 
-// Statistics
-const athleteCount = ref(0)
-const activeGoals = ref(0)
-const recentActivity = ref(0)
-const trainingPlans = ref(0)
+// Statistics - Use computed to read from localStorage
+const athleteCount = computed(() => {
+  const stored = Utils.getStore('athleteCount')
+  return stored !== null && stored !== undefined ? stored : 0
+})
+
+const exerciseCount = computed(() => {
+  const stored = Utils.getStore('exerciseCount')
+  return stored !== null && stored !== undefined ? stored : 0
+})
+
+const trainingPlans = computed(() => {
+  const stored = Utils.getStore('trainingPlans')
+  return stored !== null && stored !== undefined ? stored : 0
+})
 
 // Athletes data
 const athletes = ref([])
@@ -109,14 +119,8 @@ const fetchAthletes = async () => {
     
     athletes.value = response.data
     
-    // Update athlete count
-    athleteCount.value = athletes.value.length
-    
-    // Calculate total active goals
-    activeGoals.value = athletes.value.reduce((sum, athlete) => sum + (athlete.activeGoals || 0), 0)
-    
-    // Calculate recent activity
-    recentActivity.value = athletes.value.reduce((sum, athlete) => sum + (athlete.totalWorkouts || 0), 0)
+    // Update athlete count and persist to localStorage
+    Utils.setStore('athleteCount', athletes.value.length)
     
   } catch (err) {
     console.error('❌ Error fetching athletes:', err)
@@ -160,7 +164,6 @@ const createAthlete = async () => {
 
     const coachId = user.value?.userId || user.value?.user_id || currentUser.value?.userId || currentUser.value?.user_id
     
-    // ✅ FIXED: Changed URL to include /coach/
     const response = await axios.post('http://localhost:3121/tracker-t1/api/coach/athletes', {
       first_name: newAthlete.value.first_name,
       last_name: newAthlete.value.last_name,
@@ -215,11 +218,6 @@ const goToAthleteDetail = (athleteId) => {
     return
   }
   
-  // Navigate to athlete detail page where coach can:
-  // - View athlete profile
-  // - Add/Edit/Delete athlete exercise goals
-  // - View athlete exercise results
-  // - View athlete progress on goals
   router.push({ 
     name: 'athleteDetail', 
     params: { id: athleteId } 
@@ -227,16 +225,10 @@ const goToAthleteDetail = (athleteId) => {
 }
 
 const getInitials = (athlete) => {
-  // Try different possible field name variations
   const firstName = athlete?.first_name || athlete?.fName || athlete?.firstName
   const lastName = athlete?.last_name || athlete?.lName || athlete?.lastName
   
-  console.log('Getting initials for athlete:', athlete)
-  console.log('Extracted names:', { firstName, lastName })
-  
   if (!firstName || !lastName) {
-    console.warn('Missing name data for athlete:', athlete)
-    // Try to use email as fallback
     if (athlete?.email) {
       const emailParts = athlete.email.split('@')[0].split('.')
       if (emailParts.length >= 2) {
@@ -253,19 +245,6 @@ onMounted(async () => {
   console.log('🚀 Coach Dashboard mounted')
   
   user.value = Utils.getStore("user") || currentUser.value
-  
-  console.log('📦 User from storage:', Utils.getStore("user"))
-  console.log('📦 Current user from store:', currentUser.value)
-  console.log('📦 Final user value:', user.value)
-  
-  // ✅ ADD THIS DEBUG CODE
-  if (user.value) {
-    console.log('🔍 All user fields:', Object.keys(user.value))
-    console.log('🔍 user.userId:', user.value.userId)
-    console.log('🔍 user.user_id:', user.value.user_id)
-    console.log('🔍 user.id:', user.value.id)
-  }
-  // END DEBUG CODE
   
   if (!user.value) {
     console.log('❌ No user found, redirecting to login')
@@ -295,45 +274,34 @@ onMounted(async () => {
     
     <br />
 
-    <!-- Statistics Cards -->
     <v-row>
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="primary" dark>
-          <v-card-text>
-            <div class="text-h6">My Athletes</div>
-            <div class="text-h3 font-weight-bold">{{ athleteCount }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
+  <v-col cols="12" sm="6" md="4">
+    <v-card color="primary" dark>
+      <v-card-text>
+        <div class="text-h6">My Athletes</div>
+        <div class="text-h3 font-weight-bold">{{ athleteCount }}</div>
+      </v-card-text>
+    </v-card>
+  </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="success" dark>
-          <v-card-text>
-            <div class="text-h6">Active Goals</div>
-            <div class="text-h3 font-weight-bold">{{ activeGoals }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
+  <v-col cols="12" sm="6" md="4">
+    <v-card color="info" dark>
+      <v-card-text>
+        <div class="text-h6">Exercises</div>
+        <div class="text-h3 font-weight-bold">{{ exerciseCount }}</div>
+      </v-card-text>
+    </v-card>
+  </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="info" dark>
-          <v-card-text>
-            <div class="text-h6">Recent Activity</div>
-            <div class="text-h3 font-weight-bold">{{ recentActivity }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="warning" dark>
-          <v-card-text>
-            <div class="text-h6">Training Plans</div>
-            <div class="text-h3 font-weight-bold">{{ trainingPlans }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
+  <v-col cols="12" sm="6" md="4">
+    <v-card color="warning" dark>
+      <v-card-text>
+        <div class="text-h6">Training Plans</div>
+        <div class="text-h3 font-weight-bold">{{ trainingPlans }}</div>
+      </v-card-text>
+    </v-card>
+  </v-col>
+</v-row>
     <br />
 
     <!-- Tab Navigation -->

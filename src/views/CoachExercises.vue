@@ -14,11 +14,21 @@ const currentUser = computed(() => store.state.currentUser || store.state.loginU
 // Active tab
 const activeTab = ref('exercises')
 
-// Statistics (will be loaded from API later)
-const athleteCount = ref(0)
-const activeGoals = ref(0)
-const recentActivity = ref(0)
-const trainingPlans = ref(0)
+// Statistics - Use computed to read from localStorage
+const athleteCount = computed(() => {
+  const stored = Utils.getStore('athleteCount')
+  return stored !== null && stored !== undefined ? stored : 0
+})
+
+const exerciseCount = computed(() => {
+  const stored = Utils.getStore('exerciseCount')
+  return stored !== null && stored !== undefined ? stored : 0
+})
+
+const trainingPlans = computed(() => {
+  const stored = Utils.getStore('trainingPlans')
+  return stored !== null && stored !== undefined ? stored : 0
+})
 
 // Exercise management
 const exercises = ref([])
@@ -59,6 +69,9 @@ const loadExercises = async () => {
     loading.value = true
     const response = await exerciseServices.getAllExercises()
     exercises.value = response.data
+    
+    // Persist exercise count to localStorage
+    Utils.setStore('exerciseCount', exercises.value.length)
   } catch (error) {
     console.error('Error loading exercises:', error)
     
@@ -82,6 +95,10 @@ const saveExercise = async () => {
   try {
     const response = await exerciseServices.createExercise(newExercise.value)
     exercises.value.push(response.data)
+    
+    // Update exercise count in localStorage
+    Utils.setStore('exerciseCount', exercises.value.length)
+    
     closeAddDialog()
     alert('Exercise created successfully!')
   } catch (error) {
@@ -101,6 +118,10 @@ const deleteExercise = async (item) => {
     try {
       await exerciseServices.deleteExercise(item.id)
       exercises.value = exercises.value.filter(e => e.id !== item.id)
+      
+      // Update exercise count in localStorage
+      Utils.setStore('exerciseCount', exercises.value.length)
+      
       alert('Exercise deleted successfully!')
     } catch (error) {
       console.error('Error deleting exercise:', error)
@@ -161,44 +182,34 @@ onMounted(async () => {
     
     <br />
 
-    <!-- Statistics Cards -->
     <v-row>
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="primary" dark>
-          <v-card-text>
-            <div class="text-h6">My Athletes</div>
-            <div class="text-h3 font-weight-bold">{{ athleteCount }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
+  <v-col cols="12" sm="6" md="4">
+    <v-card color="primary" dark>
+      <v-card-text>
+        <div class="text-h6">My Athletes</div>
+        <div class="text-h3 font-weight-bold">{{ athleteCount }}</div>
+      </v-card-text>
+    </v-card>
+  </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="success" dark>
-          <v-card-text>
-            <div class="text-h6">Active Goals</div>
-            <div class="text-h3 font-weight-bold">{{ activeGoals }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
+  <v-col cols="12" sm="6" md="4">
+    <v-card color="info" dark>
+      <v-card-text>
+        <div class="text-h6">Exercises</div>
+        <div class="text-h3 font-weight-bold">{{ exerciseCount }}</div>
+      </v-card-text>
+    </v-card>
+  </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="info" dark>
-          <v-card-text>
-            <div class="text-h6">Recent Activity</div>
-            <div class="text-h3 font-weight-bold">{{ recentActivity }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="warning" dark>
-          <v-card-text>
-            <div class="text-h6">Training Plans</div>
-            <div class="text-h3 font-weight-bold">{{ trainingPlans }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+  <v-col cols="12" sm="6" md="4">
+    <v-card color="warning" dark>
+      <v-card-text>
+        <div class="text-h6">Training Plans</div>
+        <div class="text-h3 font-weight-bold">{{ trainingPlans }}</div>
+      </v-card-text>
+    </v-card>
+  </v-col>
+</v-row>
 
     <br />
 
