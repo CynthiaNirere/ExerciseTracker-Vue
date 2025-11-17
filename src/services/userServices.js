@@ -8,7 +8,7 @@ export default {
   
   // Get user by ID
   getUser(id) {
-    return apiClient.get(`/users/${id}`);
+    return apiClient.get(`/users/${id}`); 
   },
   
   // Create new user
@@ -18,11 +18,11 @@ export default {
   
   // Update user
   updateUser(id, user) {
-    return apiClient.put(`/users/${id}`, user);
+    return apiClient.put(`/users/${id}`, user); 
   },
   
   // Delete user
   deleteUser(id) {
-    return apiClient.delete(`/users/${id}`);
+    return apiClient.delete(`/users/${id}`); 
   }
 };

@@ -70,7 +70,7 @@ onMounted(() => {
     <v-toolbar-title>{{ title }}</v-toolbar-title>
     
     <v-spacer></v-spacer>
-
+    
     <!-- Admin Menu -->
     <template v-if="user && user.role === 'admin'">
       <v-btn class="mx-2" :to="{ name: 'adminDashboard' }" variant="text">
@@ -82,8 +82,12 @@ onMounted(() => {
       <v-btn class="mx-2" :to="{ name: 'exerciseManagement' }" variant="text">
         Exercises
       </v-btn>
+      <!-- ADDED: Exercise Plans navigation button -->
+      <v-btn class="mx-2" :to="{ name: 'exercisePlansManagement' }" variant="text">
+        Exercise Plans
+      </v-btn>
     </template>
-
+    
     <!-- Athlete Menu -->
     <template v-else-if="user && user.role === 'athlete'">
       <v-btn class="mx-2" :to="{ name: 'athleteDashboard' }" variant="text">
@@ -96,7 +100,7 @@ onMounted(() => {
         Goals
       </v-btn>
     </template>
-
+    
     <!-- User Menu -->
     <v-menu v-if="user" location="bottom">
       <template v-slot:activator="{ props }">

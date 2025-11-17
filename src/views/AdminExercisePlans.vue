@@ -25,12 +25,21 @@ const currentPlan = ref({
 
 const planExercises = ref([]);
 
-// Fetch all plans
+// Simplified fetch - try this first
 const fetchPlans = async () => {
   try {
     loading.value = true;
     const response = await ExercisePlanServices.getAllExercisePlans();
+    
+    console.log('📦 Raw plans response:', response.data);
+    
+    // Check if exercises are already included
+    if (response.data && response.data.length > 0) {
+      console.log('📋 First plan structure:', response.data[0]);
+    }
+    
     plans.value = response.data || [];
+    console.log('✅ Plans loaded:', plans.value);
     message.value = '';
   } catch (error) {
     console.error('Error fetching exercise plans:', error);
@@ -39,13 +48,15 @@ const fetchPlans = async () => {
     loading.value = false;
   }
 };
-
 // Fetch all exercises
 const fetchExercises = async () => {
   try {
     const response = await ExerciseServices.getAllExercises();
     availableExercises.value = response.data || [];
     console.log('✅ Loaded exercises:', availableExercises.value.length);
+    if (availableExercises.value.length > 0) {
+      console.log('📝 First exercise structure:', availableExercises.value[0]);
+    }
   } catch (error) {
     console.error('Error fetching exercises:', error);
     showMessage('Failed to load exercises', 'error');
@@ -88,12 +99,31 @@ const editPlan = async (plan) => {
     // Fetch plan details with exercises
     const response = await ExercisePlanServices.getExercisePlanDetails(plan.id);
     console.log('📋 Plan details:', response.data);
+    console.log('📋 Exercises data type:', typeof response.data.exercises);
+    console.log('📋 Exercises data:', response.data.exercises);
+    
+    // Handle different response formats
+     let exercisesArray = [];
+
+      if (Array.isArray(response.data.exerciseList)) {
+          exercisesArray = response.data.exerciseList; // CHANGED: use exerciseList
+      } else if (Array.isArray(response.data.exercises)) {
+  exercisesArray = response.data.exercises;
+      } else if (response.data.Exercises && Array.isArray(response.data.Exercises)) {
+          exercisesArray = response.data.Exercises;
+      }
+    
+    console.log('📋 Using exercises array:', exercisesArray);
     
     // Map the backend response correctly
-    planExercises.value = (response.data.exercises || []).map(exercise => {
+    planExercises.value = exercisesArray.map(exercise => {
       console.log('Mapping exercise:', exercise);
+      
+      // Get the actual exercise_id
+      const exerciseId = exercise.exercise_id || exercise.id;
+      
       return {
-        exercise_id: exercise.id,
+        exercise_id: exerciseId,
         sets: exercise.ExercisePlanItem?.sets || 3,
         reps: parseInt(exercise.ExercisePlanItem?.reps) || 10,
         weight: parseFloat(exercise.ExercisePlanItem?.weight) || 0,
@@ -158,7 +188,10 @@ const removeExercise = (index) => {
 
 // Get exercise name by ID
 const getExerciseName = (exerciseId) => {
-  const exercise = availableExercises.value.find(ex => ex.exercise_id === parseInt(exerciseId));
+  const exercise = availableExercises.value.find(ex => 
+    ex.id === parseInt(exerciseId) || ex.exercise_id === parseInt(exerciseId)
+  );
+  
   const name = exercise ? exercise.name : 'Unknown Exercise';
   if (!exercise) {
     console.warn(`Exercise ${exerciseId} not found in availableExercises`);
@@ -168,8 +201,10 @@ const getExerciseName = (exerciseId) => {
 
 // Get exercise muscle group
 const getExerciseMuscleGroup = (exerciseId) => {
-  const exercise = availableExercises.value.find(ex => ex.exercise_id === parseInt(exerciseId));
-  return exercise ? exercise.muscle_group : '';
+  const exercise = availableExercises.value.find(ex => 
+    ex.id === parseInt(exerciseId) || ex.exercise_id === parseInt(exerciseId)
+  );
+  return exercise ? (exercise.muscle_group || exercise.muscleGroup) : '';
 };
 
 // Save plan
@@ -195,6 +230,8 @@ const savePlan = async () => {
       }))
     };
     
+    console.log('💾 Saving plan data:', planData);
+    
     if (isEditing.value) {
       await ExercisePlanServices.updateExercisePlan(currentPlan.value.id, planData);
       showMessage('Plan updated successfully', 'success');
@@ -207,6 +244,7 @@ const savePlan = async () => {
     await fetchPlans();
   } catch (error) {
     console.error('Error saving plan:', error);
+    console.error('Error response:', error.response?.data);
     showMessage(`Failed to ${isEditing.value ? 'update' : 'create'} plan`, 'error');
   }
 };
@@ -236,8 +274,8 @@ onMounted(async () => {
     router.push({ name: "login" });
     return;
   }
+  await fetchExercises(); // Load exercises first
   await fetchPlans();
-  await fetchExercises();
 });
 </script>
 
@@ -289,32 +327,61 @@ onMounted(async () => {
       </v-col>
     </v-row>
 
-    <!-- Plans Grid -->
-    <v-row v-else>
-      <v-col v-for="plan in plans" :key="plan.id" cols="12" sm="6" md="4">
-        <v-card>
-          <v-card-title class="d-flex justify-space-between align-center">
-            <span>{{ plan.name }}</span>
-            <v-chip v-if="plan.exercises && plan.exercises.length > 0" color="primary" size="small">
-              {{ plan.exercises.length }} exercise{{ plan.exercises.length !== 1 ? 's' : '' }}
-            </v-chip>
-          </v-card-title>
-          <v-card-text>
-            <p v-if="plan.description">{{ plan.description }}</p>
-            <p v-else class="text-medium-emphasis font-italic">No description</p>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn variant="text" color="primary" prepend-icon="mdi-pencil" @click="editPlan(plan)">
-              Edit
-            </v-btn>
-            <v-btn variant="text" color="error" prepend-icon="mdi-delete" @click="confirmDelete(plan)">
-              Delete
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-col>
-    </v-row>
+   <!-- Plans Grid -->
+<v-row v-else>
+  <v-col v-for="plan in plans" :key="plan.id" cols="12" sm="6" md="4">
+    <v-card>
+      <v-card-title class="d-flex justify-space-between align-center">
+        <span>{{ plan.name }}</span>
+        <!-- FIXED: Use exerciseList instead of exercises -->
+        <v-chip v-if="plan.exerciseList && plan.exerciseList.length > 0" color="primary" size="small">
+          {{ plan.exerciseList.length }} exercise{{ plan.exerciseList.length !== 1 ? 's' : '' }}
+        </v-chip>
+      </v-card-title>
+      
+      <v-card-text>
+        <p v-if="plan.description" class="mb-3">{{ plan.description }}</p>
+        <p v-else class="text-medium-emphasis font-italic mb-3">No description</p>
+        
+        <!-- Exercise List - FIXED: Use exerciseList -->
+        <div v-if="plan.exerciseList && plan.exerciseList.length > 0">
+          <v-divider class="mb-2"></v-divider>
+          <p class="text-subtitle-2 font-weight-bold mb-2">Exercises:</p>
+          <v-list density="compact" class="pa-0">
+            <v-list-item 
+              v-for="(exercise, idx) in plan.exerciseList" 
+              :key="idx"
+              class="px-0"
+              min-height="32"
+            >
+              <template v-slot:prepend>
+                <v-icon size="small" color="success">mdi-dumbbell</v-icon>
+              </template>
+              <v-list-item-title class="text-body-2">
+                {{ exercise.name }}
+              </v-list-item-title>
+              <template v-slot:append>
+                <span class="text-caption text-medium-emphasis">
+                  {{ exercise.ExercisePlanItem?.sets || 3 }}x{{ exercise.ExercisePlanItem?.reps || 10 }}
+                </span>
+              </template>
+            </v-list-item>
+          </v-list>
+        </div>
+      </v-card-text>
+      
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn variant="text" color="primary" prepend-icon="mdi-pencil" @click="editPlan(plan)">
+          Edit
+        </v-btn>
+        <v-btn variant="text" color="error" prepend-icon="mdi-delete" @click="confirmDelete(plan)">
+          Delete
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-col>
+</v-row>
 
     <!-- Add/Edit Plan Dialog -->
     <v-dialog v-model="showPlanModal" max-width="800" persistent>
@@ -355,7 +422,7 @@ onMounted(async () => {
                   v-model="selectedExerciseId"
                   :items="availableExercises"
                   item-title="name"
-                  item-value="exercise_id"
+                  :item-value="(item) => item.id || item.exercise_id"
                   label="Select exercise to add"
                   variant="outlined"
                   density="comfortable"
@@ -363,7 +430,7 @@ onMounted(async () => {
                   <template v-slot:item="{ props, item }">
                     <v-list-item v-bind="props">
                       <template v-slot:title>
-                        {{ item.raw.name }} - {{ item.raw.muscle_group }}
+                        {{ item.raw.name }} - {{ item.raw.muscle_group || item.raw.muscleGroup }}
                       </template>
                     </v-list-item>
                   </template>
@@ -487,7 +554,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* Minimal custom styles - only ~20 lines! */
 .v-card {
   transition: all 0.2s ease;
 }
