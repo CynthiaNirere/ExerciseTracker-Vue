@@ -15,10 +15,20 @@ const currentUser = computed(() => store.state.currentUser || store.state.loginU
 // Active tab
 const activeTab = ref('plans')
 
-// Statistics
-const athleteCount = ref(0)
-const activeGoals = ref(0)
-const recentActivity = ref(0)
+const athleteCount = computed(() => {
+  const stored = Utils.getStore('athleteCount')
+  return stored !== null && stored !== undefined ? stored : 0
+})
+
+const exerciseCount = computed(() => {
+  const stored = Utils.getStore('exerciseCount')
+  return stored !== null && stored !== undefined ? stored : 0
+})
+
+const trainingPlans = computed(() => {
+  const stored = Utils.getStore('trainingPlans')
+  return stored !== null && stored !== undefined ? stored : 0
+})
 
 // Plans data
 const plans = ref([])
@@ -26,6 +36,8 @@ const loading = ref(true)
 
 // Dialog state
 const showCreateDialog = ref(false)
+const showEditDialog = ref(false)
+const editingPlan = ref(null)
 const newPlan = ref({
   name: '',
   description: '',
@@ -39,7 +51,7 @@ const availableExercises = ref([])
 const selectedExercise = ref(null)
 
 // Computed
-const trainingPlansCount = computed(() => plans.value.length)
+const trainingPlansCount = computed(() => trainingPlans.value)
 
 const changeTab = (tab) => {
   if (tab === 'athletes') {
@@ -56,6 +68,9 @@ const loadPlans = async () => {
     loading.value = true
     const response = await exercisePlanServices.getAllExercisePlans()
     plans.value = response.data
+    
+    // Persist training plans count to localStorage
+    Utils.setStore('trainingPlans', plans.value.length)
   } catch (error) {
     console.error('Error loading plans:', error)
     
@@ -126,6 +141,10 @@ const savePlan = async () => {
   try {
     const response = await exercisePlanServices.createExercisePlan(newPlan.value)
     plans.value.push(response.data)
+    
+    // Update training plans count in localStorage
+    Utils.setStore('trainingPlans', plans.value.length)
+    
     closeCreateDialog()
     alert('Training plan created successfully!')
   } catch (error) {
@@ -139,12 +158,92 @@ const savePlan = async () => {
     }
   }
 }
+const openEditDialog = (plan) => {
+  console.log('📝 Opening edit dialog for plan:', plan)
+  console.log('📊 Plan exercises:', plan.exercises, typeof plan.exercises)
+  
+  // Deep copy and ensure exercises is an array
+  editingPlan.value = { 
+    ...plan,
+    exercises: Array.isArray(plan.exercises) 
+      ? [...plan.exercises] 
+      : (typeof plan.exercises === 'string' 
+        ? JSON.parse(plan.exercises) 
+        : [])
+  }
+  
+  console.log('✅ Editing plan exercises:', editingPlan.value.exercises)
+  
+  showEditDialog.value = true
+  loadExercises()
+}
 
+const closeEditDialog = () => {
+  showEditDialog.value = false
+  editingPlan.value = null
+}
+
+const updatePlan = async () => {
+  if (!editingPlan.value.name || !editingPlan.value.description) {
+    alert('Please fill in plan name and description')
+    return
+  }
+
+  if (editingPlan.value.exercises.length === 0) {
+    alert('Please add at least one exercise to the plan')
+    return
+  }
+
+  try {
+    const response = await exercisePlanServices.updateExercisePlan(editingPlan.value.id, editingPlan.value)
+    const index = plans.value.findIndex(p => p.id === editingPlan.value.id)
+    if (index !== -1) {
+      plans.value[index] = response.data
+    }
+    
+    // Update localStorage count
+    Utils.setStore('trainingPlans', plans.value.length)
+    
+    closeEditDialog()
+    alert('Training plan updated successfully!')
+  } catch (error) {
+    console.error('Error updating plan:', error)
+    
+    if (error.response?.status === 401) {
+      alert('Session expired. Please log in again.')
+      router.push('/')
+    } else {
+      alert('Failed to update plan: ' + (error.response?.data?.message || error.message))
+    }
+  }
+}
+
+const addExerciseToEdit = () => {
+  if (!editingPlan.value.exercises) {
+    editingPlan.value.exercises = []
+  }
+  
+  if (selectedExercise.value && !editingPlan.value.exercises.includes(selectedExercise.value)) {
+    editingPlan.value.exercises.push(selectedExercise.value)
+    selectedExercise.value = null
+  }
+}
+
+const removeExerciseFromEdit = (exerciseId) => {
+  if (!editingPlan.value.exercises) {
+    editingPlan.value.exercises = []
+  }
+  editingPlan.value.exercises = editingPlan.value.exercises.filter(id => id !== exerciseId)
+}
 const deletePlan = async (plan) => {
   if (confirm(`Delete "${plan.name}"?`)) {
     try {
       await exercisePlanServices.deleteExercisePlan(plan.id)
       plans.value = plans.value.filter(p => p.id !== plan.id)
+      
+      // Update training plans count in localStorage
+      Utils.setStore('trainingPlans', plans.value.length)
+      
       alert('Plan deleted successfully!')
     } catch (error) {
       console.error('Error deleting plan:', error)
@@ -158,7 +257,6 @@ const deletePlan = async (plan) => {
     }
   }
 }
-
 onMounted(async () => {
   user.value = Utils.getStore("user") || currentUser.value
   
@@ -190,44 +288,34 @@ onMounted(async () => {
     
     <br />
 
-    <!-- Statistics Cards -->
-    <v-row>
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="primary" dark>
-          <v-card-text>
-            <div class="text-h6">My Athletes</div>
-            <div class="text-h3 font-weight-bold">{{ athleteCount }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
+   <v-row>
+  <v-col cols="12" sm="6" md="4">
+    <v-card color="primary" dark>
+      <v-card-text>
+        <div class="text-h6">My Athletes</div>
+        <div class="text-h3 font-weight-bold">{{ athleteCount }}</div>
+      </v-card-text>
+    </v-card>
+  </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="success" dark>
-          <v-card-text>
-            <div class="text-h6">Active Goals</div>
-            <div class="text-h3 font-weight-bold">{{ activeGoals }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
+  <v-col cols="12" sm="6" md="4">
+    <v-card color="info" dark>
+      <v-card-text>
+        <div class="text-h6">Exercises</div>
+        <div class="text-h3 font-weight-bold">{{ exerciseCount }}</div>
+      </v-card-text>
+    </v-card>
+  </v-col>
 
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="info" dark>
-          <v-card-text>
-            <div class="text-h6">Recent Activity</div>
-            <div class="text-h3 font-weight-bold">{{ recentActivity }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" sm="6" md="3">
-        <v-card color="warning" dark>
-          <v-card-text>
-            <div class="text-h6">Training Plans</div>
-            <div class="text-h3 font-weight-bold">{{ trainingPlansCount }}</div>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+  <v-col cols="12" sm="6" md="4">
+    <v-card color="warning" dark>
+      <v-card-text>
+        <div class="text-h6">Training Plans</div>
+        <div class="text-h3 font-weight-bold">{{ trainingPlans }}</div>
+      </v-card-text>
+    </v-card>
+  </v-col>
+</v-row>
 
     <br />
 
@@ -291,7 +379,7 @@ onMounted(async () => {
               </v-card-text>
               
               <v-card-actions>
-                <v-btn variant="text" color="primary">Edit</v-btn>
+                <v-btn variant="text" color="primary" @click="openEditDialog(plan)">Edit</v-btn>
                 <v-btn variant="text" color="error" @click="deletePlan(plan)">Delete</v-btn>
               </v-card-actions>
             </v-card>
@@ -413,5 +501,113 @@ onMounted(async () => {
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <!-- Edit Plan Dialog -->
+<v-dialog v-model="showEditDialog" max-width="700px">
+  <v-card>
+    <v-card-title class="bg-primary">
+      <div class="d-flex justify-space-between align-center">
+        <div>
+          <div class="text-h5">Edit Plan</div>
+          <div class="text-caption">Update training plan details</div>
+        </div>
+        <v-btn icon variant="text" @click="closeEditDialog">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </div>
+    </v-card-title>
+
+    <v-card-text class="pt-4" v-if="editingPlan">
+      <v-form>
+        <v-row>
+          <v-col cols="12" md="8">
+            <v-text-field
+              v-model="editingPlan.name"
+              label="Plan Name *"
+              variant="outlined"
+              density="comfortable"
+              required
+            ></v-text-field>
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-select
+              v-model="editingPlan.difficulty"
+              label="Difficulty"
+              :items="['Beginner', 'Intermediate', 'Advanced']"
+              variant="outlined"
+              density="comfortable"
+            ></v-select>
+          </v-col>
+        </v-row>
+
+        <v-textarea
+          v-model="editingPlan.description"
+          label="Description *"
+          variant="outlined"
+          density="comfortable"
+          rows="3"
+          class="mb-3"
+          required
+        ></v-textarea>
+
+        <v-text-field
+          v-model="editingPlan.duration"
+          label="Duration (e.g., 8 weeks)"
+          variant="outlined"
+          density="comfortable"
+          class="mb-4"
+        ></v-text-field>
+
+        <div class="text-h6 mb-3">Exercises</div>
+        
+        <div class="d-flex mb-4">
+          <v-select
+            v-model="selectedExercise"
+            label="Select exercise to add"
+            :items="availableExercises"
+            item-title="name"
+            item-value="id"
+            variant="outlined"
+            density="comfortable"
+            class="flex-grow-1 mr-2"
+          ></v-select>
+          <v-btn color="primary" @click="addExerciseToEdit">
+            <v-icon left>mdi-plus</v-icon>
+            Add
+          </v-btn>
+        </div>
+
+        <!-- Selected Exercises -->
+        <div v-if="editingPlan.exercises && editingPlan.exercises.length > 0" class="mb-4">
+          <v-chip
+            v-for="exerciseId in editingPlan.exercises"
+            :key="exerciseId"
+            closable
+            @click:close="removeExerciseFromEdit(exerciseId)"
+            class="ma-1"
+          >
+            {{ getExerciseName(exerciseId) }}
+          </v-chip>
+        </div>
+        <v-alert v-else type="info" density="compact">
+          No exercises added yet. Select an exercise above to get started.
+        </v-alert>
+      </v-form>
+    </v-card-text>
+
+    <v-card-actions>
+      <v-spacer></v-spacer>
+      <v-btn variant="text" @click="closeEditDialog">
+        Cancel
+      </v-btn>
+      <v-btn 
+        color="primary" 
+        @click="updatePlan"
+        :disabled="!editingPlan || !editingPlan.name || !editingPlan.description || !editingPlan.exercises || editingPlan.exercises.length === 0"
+      >
+        Update Plan
+      </v-btn>
+    </v-card-actions>
+  </v-card>
+</v-dialog>
   </v-container>
 </template>
