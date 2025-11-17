@@ -20,7 +20,6 @@ jobs:
         with:
           node-version: 18
       
-      # CRITICAL: Create .env BEFORE building
       - name: Create production environment file
         run: |
           touch .env
