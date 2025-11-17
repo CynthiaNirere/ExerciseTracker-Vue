@@ -73,7 +73,7 @@ export default {
 
   // Get specific athlete's workout results (for coach view)
   getAthleteResultsForCoach(athleteId) {
-    return apiClient.get(`/exercises/athlete/${athleteId}/results`);
+    return apiClient.get(`/exercises/athlete/${athleteId}`);  // ✅ FIXED: Removed /results
   },
 
  
