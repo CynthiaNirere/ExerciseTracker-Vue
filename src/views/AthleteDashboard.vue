@@ -71,6 +71,15 @@ onMounted(() => {
           <v-card-text>Track your progress towards goals</v-card-text>
         </v-card>
       </v-col>
+      <v-col cols="12" md="4">
+  <v-card @click="router.push({ name: 'athleteAssignedPlans' })" hover>
+    <v-card-title class="text-h5">
+      <v-icon left>mdi-clipboard-text</v-icon>
+      Training Plans
+    </v-card-title>
+    <v-card-text>View plans assigned by your coach</v-card-text>
+  </v-card>
+</v-col>
     </v-row>
   </v-container>
 </template>

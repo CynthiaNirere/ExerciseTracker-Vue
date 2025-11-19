@@ -6,6 +6,7 @@ import Utils from '../config/utils'
 import athleteServices from '../services/athleteServices'
 import goalServices from '../services/goalServices'
 import exerciseServices from '../services/exerciseServices'
+import exercisePlanServices from '../services/exercisePlanServices'  // ← ADD THIS IMPORT
 
 const router = useRouter()
 const route = useRoute()
@@ -39,6 +40,14 @@ const goals = ref([])
 
 // Workout Results data
 const workoutResults = ref([])
+
+// ========================================
+// NEW: Plan Assignment Variables
+// ========================================
+const athleteAssignedPlans = ref([])
+const availablePlans = ref([])
+const showAssignPlanDialog = ref(false)
+const selectedPlanId = ref(null)
 
 // Loading states
 const loading = ref(true)
@@ -127,6 +136,68 @@ const loadExercises = async () => {
     exercises.value = response.data
   } catch (err) {
     console.error('Error loading exercises:', err)
+  }
+}
+
+// ========================================
+// NEW: Plan Assignment Functions
+// ========================================
+const fetchAthleteAssignedPlans = async () => {
+  try {
+    const response = await exercisePlanServices.getPlansByAthlete(athleteId.value)
+    athleteAssignedPlans.value = response.data
+    console.log('✅ Assigned plans loaded:', athleteAssignedPlans.value)
+  } catch (err) {
+    console.error('Error fetching assigned plans:', err)
+  }
+}
+
+const loadAvailablePlans = async () => {
+  try {
+    const response = await exercisePlanServices.getAllExercisePlans()
+    availablePlans.value = response.data
+  } catch (err) {
+    console.error('Error loading plans:', err)
+  }
+}
+
+const openAssignPlanDialog = () => {
+  loadAvailablePlans()
+  showAssignPlanDialog.value = true
+}
+
+const closeAssignPlanDialog = () => {
+  showAssignPlanDialog.value = false
+  selectedPlanId.value = null
+}
+
+const assignPlan = async () => {
+  if (!selectedPlanId.value) {
+    alert('Please select a plan')
+    return
+  }
+
+  try {
+    await exercisePlanServices.assignPlanToAthlete(selectedPlanId.value, athleteId.value)
+    alert('Plan assigned successfully!')
+    await fetchAthleteAssignedPlans()
+    closeAssignPlanDialog()
+  } catch (err) {
+    console.error('Error assigning plan:', err)
+    alert('Failed to assign plan: ' + (err.response?.data?.message || err.message))
+  }
+}
+
+const unassignPlan = async (assignmentId, planId) => {
+  if (confirm('Remove this plan from the athlete?')) {
+    try {
+      await exercisePlanServices.unassignPlanFromAthlete(planId, athleteId.value)
+      alert('Plan unassigned successfully!')
+      await fetchAthleteAssignedPlans()
+    } catch (err) {
+      console.error('Error unassigning plan:', err)
+      alert('Failed to unassign plan')
+    }
   }
 }
 
@@ -247,6 +318,7 @@ onMounted(async () => {
     await fetchAthleteGoals()
     await fetchAthleteResults()
     await loadExercises()
+    await fetchAthleteAssignedPlans()  // ← ADD THIS
   }
 })
 </script>
@@ -329,6 +401,7 @@ onMounted(async () => {
         <v-tabs v-model="activeTab" bg-color="primary" dark>
           <v-tab value="goals">Goals</v-tab>
           <v-tab value="results">Results</v-tab>
+          <v-tab value="plans">Plans</v-tab>  <!-- ← ADDED THIS TAB -->
           <v-tab value="profile">Profile</v-tab>
         </v-tabs>
 
@@ -425,6 +498,73 @@ onMounted(async () => {
 
               <v-alert v-else type="info" variant="tonal">
                 No workout results yet.
+              </v-alert>
+            </v-window-item>
+
+            <!-- ========================================
+                 NEW: Plans Tab
+                 ======================================== -->
+            <v-window-item value="plans">
+              <div class="d-flex justify-space-between align-center mb-4">
+                <div>
+                  <h3 class="text-h6 font-weight-bold">Assigned Training Plans</h3>
+                  <p class="text-caption text-grey">Manage athlete's training programs</p>
+                </div>
+                <v-btn color="primary" @click="openAssignPlanDialog">
+                  <v-icon left>mdi-plus</v-icon>
+                  Assign Plan
+                </v-btn>
+              </div>
+
+              <!-- Assigned Plans List -->
+              <v-row v-if="athleteAssignedPlans.length > 0">
+                <v-col v-for="assignment in athleteAssignedPlans" :key="assignment.assignmentId" cols="12">
+                  <v-card elevation="1">
+                    <v-card-text>
+                      <div class="d-flex justify-space-between align-center">
+                        <div class="flex-grow-1">
+                          <div class="d-flex align-center mb-2">
+                            <h4 class="text-h6 font-weight-bold mr-3">{{ assignment.plan.name }}</h4>
+                            <v-chip size="small" :color="assignment.status === 'active' ? 'success' : 'grey'">
+                              {{ assignment.status }}
+                            </v-chip>
+                          </div>
+                          <p class="text-caption text-grey">
+                            Assigned: {{ formatDate(assignment.assignedDate) }} • 
+                            {{ assignment.plan.exerciseCount }} exercises
+                          </p>
+                          <p class="text-body-2 mt-2">{{ assignment.plan.description || 'No description' }}</p>
+                          
+                          <v-divider class="my-3"></v-divider>
+                          
+                          <div class="d-flex justify-space-between">
+                            <div>
+                              <span class="text-caption text-grey">Duration: </span>
+                              <span class="font-weight-bold">{{ assignment.plan.duration || '-' }}</span>
+                            </div>
+                            <div>
+                              <span class="text-caption text-grey">Difficulty: </span>
+                              <span class="font-weight-bold">{{ assignment.plan.difficulty || '-' }}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <v-btn 
+                          icon 
+                          size="small" 
+                          color="error" 
+                          @click="unassignPlan(assignment.assignmentId, assignment.plan.id)"
+                          class="ml-4"
+                        >
+                          <v-icon>mdi-delete</v-icon>
+                        </v-btn>
+                      </div>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+
+              <v-alert v-else type="info" variant="tonal">
+                No plans assigned yet. Click "Assign Plan" to get started.
               </v-alert>
             </v-window-item>
 
@@ -566,6 +706,51 @@ onMounted(async () => {
             >
               Create Goal
             </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <!-- ========================================
+           NEW: Assign Plan Dialog
+           ======================================== -->
+      <v-dialog v-model="showAssignPlanDialog" max-width="600px">
+        <v-card>
+          <v-card-title class="bg-primary">
+            <div class="d-flex justify-space-between align-center">
+              <span class="text-h5">Assign Training Plan</span>
+              <v-btn icon variant="text" @click="closeAssignPlanDialog">
+                <v-icon>mdi-close</v-icon>
+              </v-btn>
+            </div>
+          </v-card-title>
+
+          <v-card-text class="pt-4">
+            <p class="text-caption text-grey mb-4">
+              Select a training plan to assign to {{ athlete.first_name }} {{ athlete.last_name }}
+            </p>
+
+            <v-select
+              v-model="selectedPlanId"
+              :items="availablePlans"
+              item-title="name"
+              item-value="id"
+              label="Training Plan *"
+              variant="outlined"
+            >
+              <template v-slot:item="{ props, item }">
+                <v-list-item v-bind="props">
+                  <template v-slot:subtitle>
+                    <small>{{ item.raw.difficulty }} • {{ item.raw.exercises }} exercises</small>
+                  </template>
+                </v-list-item>
+              </template>
+            </v-select>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn variant="text" @click="closeAssignPlanDialog">Cancel</v-btn>
+            <v-btn color="primary" @click="assignPlan" :disabled="!selectedPlanId">Assign Plan</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
