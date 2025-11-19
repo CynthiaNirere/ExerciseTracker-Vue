@@ -41,18 +41,17 @@ export default {
     return apiClient.get(`/exercise-plans/coach/${coachId}`); // FIXED: parentheses instead of backticks
   },
   
-  // Assign plan to athlete
-  assignPlanToAthlete(planId, athleteId) {
-    return apiClient.post(`/exercise-plans/${planId}/assign`, { athleteId }); // FIXED: parentheses instead of backticks
+assignPlanToAthlete(planId, athleteId) {
+    return apiClient.post(`/exercise-plans/${planId}/assign`, { athleteId });
   },
   
   // Get plans assigned to a specific athlete
   getPlansByAthlete(athleteId) {
-    return apiClient.get(`/exercise-plans/athlete/${athleteId}`); // FIXED: parentheses instead of backticks
+    return apiClient.get(`/exercise-plans/athlete/${athleteId}`);
   },
   
   // Unassign plan from athlete
   unassignPlanFromAthlete(planId, athleteId) {
-    return apiClient.delete(`/exercise-plans/${planId}/assign/${athleteId}`); // FIXED: parentheses instead of backticks
+    return apiClient.delete(`/exercise-plans/${planId}/assign/${athleteId}`);
   }
 };

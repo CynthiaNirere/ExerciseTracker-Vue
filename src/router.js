@@ -17,6 +17,7 @@ import RecordExercise from "./views/RecordExercise.vue";
 import AthleteGoals from "./views/AthleteGoals.vue";
 import ViewExerciseResults from "./views/ViewExerciseResults.vue";
 import ViewProgress from "./views/ViewProgress.vue";
+import AthleteAssignedPlans from "./views/AthleteAssignedPlans.vue";
 
 // Coach Views
 import CoachDashboard from "./views/CoachDashboard.vue";
@@ -136,6 +137,12 @@ const router = createRouter({
       component: ViewProgress,
       meta: { requiresAuth: true, role: "athlete" },
     },
+    {
+  path: "/athlete/assigned-plans",
+  name: "athleteAssignedPlans",
+  component: AthleteAssignedPlans,
+  meta: { requiresAuth: true, role: "athlete" }
+},
 
    
     {
