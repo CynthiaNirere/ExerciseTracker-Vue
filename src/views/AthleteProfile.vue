@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import UserServices from "../services/userServices";
-import AthleteServices from "../services/athleteServices";
+import athleteServices from "../services/athleteServices";
 import Utils from "../config/utils";
 import { useRouter } from "vue-router";
 
@@ -29,14 +28,14 @@ const loadProfile = async () => {
       return;
     }
     
-    // Load user basic info
+    // Load user basic info from localStorage
     profile.value.fName = user.value.fName || "";
     profile.value.lName = user.value.lName || "";
     profile.value.email = user.value.email || "";
     
-    // Load athlete profile data (just bio)
+    // Load athlete profile data (bio)
     try {
-      const athleteResponse = await AthleteServices.getAthleteProfile();
+      const athleteResponse = await athleteServices.getAthleteProfile();
       console.log("Athlete profile loaded:", athleteResponse.data);
       
       if (athleteResponse.data) {
@@ -53,7 +52,7 @@ const loadProfile = async () => {
   }
 };
 
-// Update profile
+// Update profile (bio only)
 const updateProfile = async () => {
   if (!user.value || !user.value.userId) {
     message.value = "Error: User not found";
@@ -61,17 +60,14 @@ const updateProfile = async () => {
   }
   
   try {
-    // Just update bio in athlete profile
+    // Update only bio in athlete profile
     const athleteUpdate = {
       bio: profile.value.bio
     };
     
-    await AthleteServices.updateAthleteProfile(athleteUpdate);
+    await athleteServices.updateAthleteProfile(athleteUpdate);
     
-    // Note: We're skipping user update (name/email) since the backend route has issues
-    // Athletes can contact admin to update name/email
-    
-    message.value = "Bio updated successfully! Contact admin to update name/email.";
+    message.value = "Bio updated successfully!";
   } catch (error) {
     message.value = "Error updating profile: " + (error.response?.data?.message || error.message);
     console.error("Update error:", error);
@@ -127,7 +123,7 @@ onMounted(() => {
                 label="First Name"
                 :counter="50"
                 readonly
-                hint="Contact admin to change"
+                hint="Contact your coach or admin to change"
                 persistent-hint
               ></v-text-field>
             </v-col>
@@ -137,7 +133,7 @@ onMounted(() => {
                 label="Last Name"
                 :counter="50"
                 readonly
-                hint="Contact admin to change"
+                hint="Contact your coach or admin to change"
                 persistent-hint
               ></v-text-field>
             </v-col>
@@ -148,7 +144,7 @@ onMounted(() => {
             label="Email"
             type="email"
             readonly
-            hint="Contact admin to change"
+            hint="Contact your coach or admin to change"
             persistent-hint
             class="mb-4"
           ></v-text-field>
@@ -157,9 +153,13 @@ onMounted(() => {
             v-model="profile.bio"
             label="Bio"
             rows="4"
-            hint="Tell us about yourself (you can edit this)"
+            hint="Tell us about yourself, your fitness goals, or training history"
             persistent-hint
           ></v-textarea>
+          
+          <v-alert type="info" density="compact" class="mt-3">
+            <small>You can only edit your bio. Contact your coach or admin to update other information.</small>
+          </v-alert>
         </v-form>
       </v-card-text>
       
@@ -171,7 +171,7 @@ onMounted(() => {
           :disabled="!valid"
           @click="updateProfile"
         >
-          Save 
+          Save Bio
         </v-btn>
       </v-card-actions>
     </v-card>
