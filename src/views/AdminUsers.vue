@@ -6,7 +6,7 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 const valid = ref(true);
 const users = ref([]);
-const search = ref(""); // ADDED: Missing search ref
+const search = ref("");
 const newUser = ref({
   fName: "",
   lName: "",
@@ -40,7 +40,7 @@ const fetchUsers = async () => {
   try {
     const response = await UserServices.getAllUsers();
     users.value = response.data;
-    message.value = "Users loaded successfully";
+    message.value = "";  
   } catch (error) {
     message.value = "Error loading users: " + error.message;
     console.error("Error fetching users:", error);
@@ -50,18 +50,19 @@ const fetchUsers = async () => {
 // Create user
 const saveUser = async () => {
   try {
-    const response = await UserServices.createUser(newUser.value);
+    await UserServices.createUser(newUser.value);
     message.value = "User created successfully";
     newUser.value = { fName: "", lName: "", email: "", role: "" };
     showAddDialog.value = false;
     fetchUsers();
   } catch (error) {
-    message.value = "Error creating user: " + error.response?.data?.message || error.message;
+    message.value = "Error creating user: " + (error.response?.data?.message || error.message);
   }
 };
 
 // Select user to edit
-const editUser = (user) => {
+const editUser = (item) => {
+  const user = item.raw || item;
   selectedUser.value = { ...user };
   showEditDialog.value = true;
 };
@@ -75,19 +76,22 @@ const updateUser = async () => {
     selectedUser.value = null;
     fetchUsers();
   } catch (error) {
-    message.value = "Error updating user: " + error.response?.data?.message || error.message;
+    message.value = "Error updating user: " + (error.response?.data?.message || error.message);
   }
 };
 
 // Delete user
-const deleteUser = async (id) => {
+const deleteUser = async (item) => {
+  const user = item.raw || item;
+  const id = user.id;
+  
   if (confirm("Are you sure you want to delete this user?")) {
     try {
       await UserServices.deleteUser(id);
       message.value = "User deleted successfully";
       fetchUsers();
     } catch (error) {
-      message.value = "Error deleting user: " + error.response?.data?.message || error.message;
+      message.value = "Error deleting user: " + (error.response?.data?.message || error.message);
     }
   }
 };
@@ -112,79 +116,93 @@ onMounted(() => {
 
 <template>
   <v-container>
-    <v-toolbar color="primary">
-      <v-toolbar-title class="text-white">User Management</v-toolbar-title>
-      <v-spacer></v-spacer>
-      <v-btn color="white" variant="elevated" @click="showAddDialog = true">
-        <v-icon color="primary">mdi-plus</v-icon>
-        Add User
-      </v-btn>
-    </v-toolbar>
-
-    <br />
-    
-    <!-- Message Display -->
-    <v-alert
-      v-if="message"
-      :type="message.includes('Error') ? 'error' : 'success'"
-      closable
-      @click:close="message = ''"
-    >
-      {{ message }}
-    </v-alert>
-
-    <!-- Users Table -->
-    <v-card>
-      <v-card-title>
-        <v-text-field
-          v-model="search"
-          append-inner-icon="mdi-magnify"
-          label="Search"
-          single-line
-          hide-details
-        ></v-text-field>
+    <v-card class="mx-auto" max-width="1200">
+      <!-- Header -->
+      <v-card-title class="text-h4 font-weight-bold pa-6">
+        User Management
+        <v-spacer></v-spacer>
+        <v-btn 
+          color="primary" 
+          size="large"
+          @click="showAddDialog = true"
+          prepend-icon="mdi-plus"
+        >
+          Add User
+        </v-btn>
       </v-card-title>
-      <v-data-table
-        :headers="headers"
-        :items="users"
-        :search="search"
-        class="elevation-1"
-      >
-        <!-- Role Column -->
-        <template v-slot:item.role="{ item }">
-          <v-chip
-            :color="
-              (item.raw || item).role === 'admin' ? 'error' : 
-              (item.raw || item).role === 'coach' ? 'primary' : 
-              'success'
-            "
-            size="small"
-          >
-            {{ (item.raw || item).role }}
-          </v-chip>
-        </template>
+      
+      <v-card-subtitle class="text-h6 pa-6 pt-0 text-grey">
+        Manage system users and roles
+      </v-card-subtitle>
 
-        <!-- Actions Column -->
-        <template v-slot:item.actions="{ item }">
-          <v-btn
-            color="primary"
-            size="small"
-            class="mr-2"
-            @click="editUser(item.raw || item)"
-          >
-            <v-icon size="small">mdi-pencil</v-icon>
-            Edit
-          </v-btn>
-          <v-btn
-            color="error"
-            size="small"
-            @click="deleteUser((item.raw || item).id)"
-          >
-            <v-icon size="small">mdi-delete</v-icon>
-            Delete
-          </v-btn>
-        </template>
-      </v-data-table>
+      <!-- Message Display -->
+      <v-alert
+        v-if="message"
+        :type="message.includes('Error') ? 'error' : 'success'"
+        closable
+        @click:close="message = ''"
+        class="ma-6"
+      >
+        {{ message }}
+      </v-alert>
+
+      <!-- Users Table -->
+      <v-card-text class="pa-6 pt-0">
+        <v-data-table
+          :headers="headers"
+          :items="users"
+          :search="search"
+          class="elevation-1"
+          :items-per-page="10"
+        >
+          <!-- Search -->
+          <template v-slot:top>
+            <v-text-field
+              v-model="search"
+              append-inner-icon="mdi-magnify"
+              label="Search users"
+              single-line
+              hide-details
+              class="mb-4"
+            ></v-text-field>
+          </template>
+
+          <!-- Role Column -->
+          <template v-slot:item.role="{ item }">
+            <v-chip
+              :color="
+                (item.raw || item).role === 'admin' ? 'error' : 
+                (item.raw || item).role === 'coach' ? 'primary' : 
+                'success'
+              "
+              size="small"
+            >
+              {{ (item.raw || item).role }}
+            </v-chip>
+          </template>
+
+          <!-- Actions Column -->
+          <template v-slot:item.actions="{ item }">
+            <v-btn
+              color="primary"
+              size="small"
+              class="mr-2"
+              @click="editUser(item)"
+              prepend-icon="mdi-pencil"
+            >
+              Edit
+            </v-btn>
+            <v-btn
+              color="error"
+              size="small"
+              @click="deleteUser(item)"
+              prepend-icon="mdi-delete"
+            >
+              Delete
+            </v-btn>
+          </template>
+        </v-data-table>
+      </v-card-text>
     </v-card>
 
     <!-- Add User Dialog -->
@@ -197,19 +215,19 @@ onMounted(() => {
           <v-form v-model="valid">
             <v-text-field
               v-model="newUser.fName"
-              label="First Name"
+              label="First Name *"
               :counter="50"
               required
             ></v-text-field>
             <v-text-field
               v-model="newUser.lName"
-              label="Last Name"
+              label="Last Name *"
               :counter="50"
               required
             ></v-text-field>
             <v-text-field
               v-model="newUser.email"
-              label="Email"
+              label="Email *"
               type="email"
               required
             ></v-text-field>
@@ -218,7 +236,7 @@ onMounted(() => {
               :items="roles"
               item-title="title"
               item-value="value"
-              label="Role"
+              label="Role *"
               required
             ></v-select>
           </v-form>
@@ -247,19 +265,19 @@ onMounted(() => {
           <v-form v-model="valid">
             <v-text-field
               v-model="selectedUser.fName"
-              label="First Name"
+              label="First Name *"
               :counter="50"
               required
             ></v-text-field>
             <v-text-field
               v-model="selectedUser.lName"
-              label="Last Name"
+              label="Last Name *"
               :counter="50"
               required
             ></v-text-field>
             <v-text-field
               v-model="selectedUser.email"
-              label="Email"
+              label="Email *"
               type="email"
               required
             ></v-text-field>
@@ -268,7 +286,7 @@ onMounted(() => {
               :items="roles"
               item-title="title"
               item-value="value"
-              label="Role"
+              label="Role *"
               required
             ></v-select>
           </v-form>

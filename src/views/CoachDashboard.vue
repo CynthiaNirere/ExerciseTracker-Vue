@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import Utils from '../config/utils'
-import axios from 'axios'
+import athleteServices from '../services/athleteServices'  
 
 const router = useRouter()
 const store = useStore()
@@ -20,7 +20,7 @@ const currentUser = computed(() => {
 // Active tab
 const activeTab = ref('athletes')
 
-// Statistics - Use computed to read from localStorage
+// Statistics
 const athleteCount = computed(() => {
   const stored = Utils.getStore('athleteCount')
   return stored !== null && stored !== undefined ? stored : 0
@@ -38,8 +38,6 @@ const trainingPlans = computed(() => {
 
 // Athletes data
 const athletes = ref([])
-
-// Loading state
 const loading = ref(true)
 const error = ref(null)
 
@@ -56,40 +54,7 @@ const newAthlete = ref({
   bio: ''
 })
 
-// Get auth token from storage
-const getAuthToken = () => {
-  // First try to get token directly
-  let token = Utils.getStore("token")
-  
-  // If not found, try to get it from user object
-  if (!token) {
-    const userData = Utils.getStore("user")
-    token = userData?.token
-  }
-  
-  if (!token) {
-    console.error('❌ No auth token found!')
-    router.push('/')
-    return null
-  }
-  
-  console.log('✅ Token found:', token.substring(0, 20) + '...')
-  return token
-}
-
-// Configure axios headers with auth token
-const getAxiosConfig = () => {
-  const token = getAuthToken()
-  if (!token) return null
-  
-  return {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  }
-}
-
-// Fetch athletes from API
+// Fetch athletes from API using service
 const fetchAthletes = async () => {
   try {
     loading.value = true
@@ -97,34 +62,23 @@ const fetchAthletes = async () => {
     
     const coachId = user.value?.userId || user.value?.user_id || currentUser.value?.userId || currentUser.value?.user_id
     
-    console.log('🔍 Fetching athletes...')
-    console.log('🆔 Coach ID:', coachId)
+    console.log(' Fetching athletes for coach:', coachId)
     
     if (!coachId) {
-      console.error('❌ No coach ID found!')
+      console.error(' No coach ID found!')
       error.value = 'Coach ID not found. Please log in again.'
       loading.value = false
       return
     }
 
-    const config = getAxiosConfig()
-    if (!config) return
-    
-    const url = `http://localhost:3121/tracker-t1/api/coach/${coachId}/athletes`
-    console.log('📡 Fetching from URL:', url)
-    
-    const response = await axios.get(url, config)
-    console.log('✅ Response:', response.data)
-    console.log('📊 First athlete:', response.data[0])
+    const response = await athleteServices.getAthletesByCoach(coachId)
+    console.log(' Athletes loaded:', response.data)
     
     athletes.value = response.data
-    
-    // Update athlete count and persist to localStorage
     Utils.setStore('athleteCount', athletes.value.length)
     
   } catch (err) {
-    console.error('❌ Error fetching athletes:', err)
-    console.error('Error details:', err.response)
+    console.error(' Error fetching athletes:', err)
     
     if (err.response?.status === 401) {
       error.value = 'Session expired. Please log in again.'
@@ -159,12 +113,9 @@ const createAthlete = async () => {
   try {
     console.log('Creating athlete:', newAthlete.value)
     
-    const config = getAxiosConfig()
-    if (!config) return
-
     const coachId = user.value?.userId || user.value?.user_id || currentUser.value?.userId || currentUser.value?.user_id
     
-    const response = await axios.post('http://localhost:3121/tracker-t1/api/coach/athletes', {
+    await athleteServices.createAthlete({
       first_name: newAthlete.value.first_name,
       last_name: newAthlete.value.last_name,
       email: newAthlete.value.email,
@@ -175,19 +126,16 @@ const createAthlete = async () => {
       team: newAthlete.value.team,
       sport_type: newAthlete.value.sport_type,
       bio: newAthlete.value.bio
-    }, config)
+    })
     
-    console.log('✅ Athlete created:', response.data)
+    console.log(' Athlete created successfully')
     
-    // Refresh athletes list
     await fetchAthletes()
-    
     closeAddAthleteDialog()
-    
     alert('Athlete added successfully!')
     
   } catch (err) {
-    console.error('❌ Error creating athlete:', err)
+    console.error(' Error creating athlete:', err)
     
     if (err.response?.status === 401) {
       alert('Session expired. Please log in again.')
@@ -199,7 +147,7 @@ const createAthlete = async () => {
 }
 
 const changeTab = (tab) => {
-  console.log('🔄 Tab clicked:', tab)
+  console.log('Tab clicked:', tab)
   if (tab === 'athletes') {
     activeTab.value = 'athletes'
   } else if (tab === 'exercises') {
@@ -210,10 +158,10 @@ const changeTab = (tab) => {
 }
 
 const goToAthleteDetail = (athleteId) => {
-  console.log('🏃 Going to athlete detail:', athleteId)
+  console.log(' Going to athlete detail:', athleteId)
   
   if (!athleteId) {
-    console.error('❌ No athlete ID provided')
+    console.error(' No athlete ID provided')
     alert('Cannot view athlete details - invalid athlete ID')
     return
   }
@@ -242,19 +190,19 @@ const getInitials = (athlete) => {
 }
 
 onMounted(async () => {
-  console.log('🚀 Coach Dashboard mounted')
+  console.log(' Coach Dashboard mounted')
   
   user.value = Utils.getStore("user") || currentUser.value
   
   if (!user.value) {
-    console.log('❌ No user found, redirecting to login')
+    console.log(' No user found, redirecting to login')
     router.push('/')
   } else if (user.value.role !== 'coach') {
-    console.log('❌ User is not a coach:', user.value.role)
+    console.log(' User is not a coach:', user.value.role)
     alert('Access denied. Coach role required.')
     router.push('/')
   } else {
-    console.log('✅ User is coach, fetching athletes')
+    console.log('User is coach, fetching athletes')
     await fetchAthletes()
   }
 })
@@ -274,34 +222,36 @@ onMounted(async () => {
     
     <br />
 
+    <!-- Statistics Cards -->
     <v-row>
-  <v-col cols="12" sm="6" md="4">
-    <v-card color="primary" dark>
-      <v-card-text>
-        <div class="text-h6">My Athletes</div>
-        <div class="text-h3 font-weight-bold">{{ athleteCount }}</div>
-      </v-card-text>
-    </v-card>
-  </v-col>
+      <v-col cols="12" sm="6" md="4">
+        <v-card color="primary" dark>
+          <v-card-text>
+            <div class="text-h6">My Athletes</div>
+            <div class="text-h3 font-weight-bold">{{ athleteCount }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-  <v-col cols="12" sm="6" md="4">
-    <v-card color="info" dark>
-      <v-card-text>
-        <div class="text-h6">Exercises</div>
-        <div class="text-h3 font-weight-bold">{{ exerciseCount }}</div>
-      </v-card-text>
-    </v-card>
-  </v-col>
+      <v-col cols="12" sm="6" md="4">
+        <v-card color="info" dark>
+          <v-card-text>
+            <div class="text-h6">Exercises</div>
+            <div class="text-h3 font-weight-bold">{{ exerciseCount }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-  <v-col cols="12" sm="6" md="4">
-    <v-card color="warning" dark>
-      <v-card-text>
-        <div class="text-h6">Training Plans</div>
-        <div class="text-h3 font-weight-bold">{{ trainingPlans }}</div>
-      </v-card-text>
-    </v-card>
-  </v-col>
-</v-row>
+      <v-col cols="12" sm="6" md="4">
+        <v-card color="warning" dark>
+          <v-card-text>
+            <div class="text-h6">Training Plans</div>
+            <div class="text-h3 font-weight-bold">{{ trainingPlans }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <br />
 
     <!-- Tab Navigation -->

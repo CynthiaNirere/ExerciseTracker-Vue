@@ -9,38 +9,18 @@ const exercises = ref([]);
 const search = ref("");
 const newExercise = ref({
   name: "",
-  category: "",
-  muscleGroups: "",
+  muscleGroups: "",  
   equipment: "",
   description: "",
-  instructions: "",
-  difficulty: "",
 });
 const selectedExercise = ref(null);
 const message = ref("");
 const showAddDialog = ref(false);
 const showEditDialog = ref(false);
 
-// Category options
-const categories = [
-  { title: "Strength", value: "Strength" },
-  { title: "Cardio", value: "Cardio" },
-  { title: "Plyometrics", value: "Plyometrics" },
-  { title: "Flexibility", value: "Flexibility" },
-  { title: "Balance", value: "Balance" },
-];
 
-// Difficulty options
-const difficulties = [
-  { title: "Beginner", value: "Beginner" },
-  { title: "Intermediate", value: "Intermediate" },
-  { title: "Advanced", value: "Advanced" },
-];
-
-// Table headers
 const headers = [
   { title: 'Name', key: 'name' },
-  { title: 'Category', key: 'category' },
   { title: 'Muscle Groups', key: 'muscleGroup' },
   { title: 'Equipment', key: 'equipmentNeeded' },
   { title: 'Actions', key: 'actions', sortable: false }
@@ -64,12 +44,9 @@ const saveExercise = async () => {
     message.value = "Exercise created successfully";
     newExercise.value = { 
       name: "", 
-      category: "", 
       muscleGroups: "", 
       equipment: "", 
-      description: "", 
-      instructions: "", 
-      difficulty: "" 
+      description: ""
     };
     showAddDialog.value = false;
     fetchExercises();
@@ -86,12 +63,9 @@ const editExercise = (item) => {
   selectedExercise.value = { 
     id: exercise.id,
     name: exercise.name || "",
-    category: exercise.category || "",
     muscleGroups: exercise.muscleGroup || "",
     equipment: exercise.equipmentNeeded || "",
-    description: exercise.description || "",
-    instructions: exercise.instructions || "",
-    difficulty: exercise.difficulty || ""
+    description: exercise.description || ""
   };
   
   showEditDialog.value = true;
@@ -132,12 +106,9 @@ const deleteExercise = async (item) => {
 const cancelAdd = () => {
   newExercise.value = { 
     name: "", 
-    category: "", 
     muscleGroups: "", 
     equipment: "", 
-    description: "", 
-    instructions: "", 
-    difficulty: "" 
+    description: ""
   };
   showAddDialog.value = false;
   message.value = "";
@@ -243,23 +214,11 @@ onMounted(() => {
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="newExercise.name"
-                  label="Exercise Name"
+                  label="Exercise Name *"
                   :counter="255"
                   required
                 ></v-text-field>
               </v-col>
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="newExercise.category"
-                  :items="categories"
-                  item-title="title"
-                  item-value="value"
-                  label="Category"
-                ></v-select>
-              </v-col>
-            </v-row>
-            
-            <v-row>
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="newExercise.muscleGroups"
@@ -268,7 +227,10 @@ onMounted(() => {
                   persistent-hint
                 ></v-text-field>
               </v-col>
-              <v-col cols="12" md="6">
+            </v-row>
+            
+            <v-row>
+              <v-col cols="12">
                 <v-text-field
                   v-model="newExercise.equipment"
                   label="Required Equipment"
@@ -278,29 +240,11 @@ onMounted(() => {
               </v-col>
             </v-row>
 
-            <v-row>
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="newExercise.difficulty"
-                  :items="difficulties"
-                  item-title="title"
-                  item-value="value"
-                  label="Difficulty Level"
-                ></v-select>
-              </v-col>
-            </v-row>
-
             <v-textarea
               v-model="newExercise.description"
               label="Description"
-              rows="3"
-            ></v-textarea>
-
-            <v-textarea
-              v-model="newExercise.instructions"
-              label="Instructions"
               rows="4"
-              hint="Step-by-step instructions for performing the exercise"
+              hint="Describe how to perform the exercise"
               persistent-hint
             ></v-textarea>
           </v-form>
@@ -325,23 +269,11 @@ onMounted(() => {
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="selectedExercise.name"
-                  label="Exercise Name"
+                  label="Exercise Name *"
                   :counter="255"
                   required
                 ></v-text-field>
               </v-col>
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="selectedExercise.category"
-                  :items="categories"
-                  item-title="title"
-                  item-value="value"
-                  label="Category"
-                ></v-select>
-              </v-col>
-            </v-row>
-            
-            <v-row>
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="selectedExercise.muscleGroups"
@@ -350,7 +282,10 @@ onMounted(() => {
                   persistent-hint
                 ></v-text-field>
               </v-col>
-              <v-col cols="12" md="6">
+            </v-row>
+            
+            <v-row>
+              <v-col cols="12">
                 <v-text-field
                   v-model="selectedExercise.equipment"
                   label="Required Equipment"
@@ -360,29 +295,11 @@ onMounted(() => {
               </v-col>
             </v-row>
 
-            <v-row>
-              <v-col cols="12" md="6">
-                <v-select
-                  v-model="selectedExercise.difficulty"
-                  :items="difficulties"
-                  item-title="title"
-                  item-value="value"
-                  label="Difficulty Level"
-                ></v-select>
-              </v-col>
-            </v-row>
-
             <v-textarea
               v-model="selectedExercise.description"
               label="Description"
-              rows="3"
-            ></v-textarea>
-
-            <v-textarea
-              v-model="selectedExercise.instructions"
-              label="Instructions"
               rows="4"
-              hint="Step-by-step instructions for performing the exercise"
+              hint="Describe how to perform the exercise"
               persistent-hint
             ></v-textarea>
           </v-form>

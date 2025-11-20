@@ -8,12 +8,12 @@ export default {
   
   // Get exercise plan by ID (with exercises included)
   getExercisePlanById(planId) {
-    return apiClient.get(`/exercise-plans/${planId}`); // FIXED: parentheses instead of backticks
+    return apiClient.get(`/exercise-plans/${planId}`);  
   },
   
   // Get exercise plan details
   getExercisePlanDetails(planId) {
-    return apiClient.get(`/exercise-plans/${planId}`); // FIXED: parentheses instead of backticks
+    return apiClient.get(`/exercise-plans/${planId}`); 
   },
   
   // Create new exercise plan
@@ -23,35 +23,31 @@ export default {
   
   // Update exercise plan
   updateExercisePlan(planId, planData) {
-    return apiClient.put(`/exercise-plans/${planId}`, planData); // FIXED: parentheses instead of backticks
+    return apiClient.put(`/exercise-plans/${planId}`, planData);  
   },
   
   // Delete exercise plan
   deleteExercisePlan(planId) {
-    return apiClient.delete(`/exercise-plans/${planId}`); // FIXED: parentheses instead of backticks
-  },
-  
-  // Get plans by difficulty
-  getPlansByDifficulty(difficulty) {
-    return apiClient.get(`/exercise-plans/difficulty/${difficulty}`); // FIXED: parentheses instead of backticks
+    return apiClient.delete(`/exercise-plans/${planId}`);  
   },
   
   // Get plans created by a specific coach
   getPlansByCoach(coachId) {
-    return apiClient.get(`/exercise-plans/coach/${coachId}`); // FIXED: parentheses instead of backticks
+    return apiClient.get(`/exercise-plans/coach/${coachId}`);  
   },
   
-assignPlanToAthlete(planId, athleteId) {
-    return apiClient.post(`/exercise-plans/${planId}/assign`, { athleteId });
+  // Assign plan to athlete
+  assignPlanToAthlete(planId, athleteId) {
+    return apiClient.post(`/exercise-plans/${planId}/assign`, { athleteId });  
   },
   
   // Get plans assigned to a specific athlete
   getPlansByAthlete(athleteId) {
-    return apiClient.get(`/exercise-plans/athlete/${athleteId}`);
+    return apiClient.get(`/exercise-plans/athlete/${athleteId}`);  
   },
   
   // Unassign plan from athlete
   unassignPlanFromAthlete(planId, athleteId) {
-    return apiClient.delete(`/exercise-plans/${planId}/assign/${athleteId}`);
+    return apiClient.delete(`/exercise-plans/${planId}/assign/${athleteId}`);  
   }
 };

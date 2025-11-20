@@ -18,7 +18,7 @@ const newGoal = ref({
   currentValue: 0,
   unit: "count",
   targetDate: "",
-  status: "in_progress"
+  status: "active"  // ✅ FIXED: Changed from 'in_progress' to 'active'
 });
 const selectedGoal = ref(null);
 const message = ref("");
@@ -37,9 +37,9 @@ const unitOptions = [
   { title: "Percentage (%)", value: "percentage" }
 ];
 
-// Status options
+// Status options - ✅ FIXED: Updated status values
 const statusOptions = [
-  { title: "In Progress", value: "in_progress" },
+  { title: "Active", value: "active" },
   { title: "Completed", value: "completed" },
   { title: "Paused", value: "paused" }
 ];
@@ -86,7 +86,7 @@ const headers = [
   { title: 'Target', key: 'targetValue' },
   { title: 'Current', key: 'currentValue' },
   { title: 'Unit', key: 'unit' },
-  { title: 'Target Date', key: 'targetDate' },
+  { title: 'Target Date', key: 'endDate' },  // ✅ FIXED: Changed from targetDate to endDate
   { title: 'Status', key: 'status' },
   { title: 'Actions', key: 'actions', sortable: false }
 ];
@@ -125,10 +125,10 @@ const fetchGoals = async () => {
     loading.value = true;
     const response = await GoalServices.getGoalsByAthlete(user.value.userId);
     
-    // Ensure dates are properly formatted
+    // ✅ FIXED: Map endDate to targetDate for display
     goals.value = (response.data || []).map(goal => ({
       ...goal,
-      targetDate: goal.targetDate ? goal.targetDate.split('T')[0] : null,
+      targetDate: goal.endDate ? goal.endDate.split('T')[0] : null,
       unit: goal.unit || 'count'
     }));
     
@@ -193,7 +193,7 @@ const saveGoal = async () => {
       currentValue: 0,
       unit: "count",
       targetDate: "",
-      status: "in_progress"
+      status: "active"  // ✅ FIXED
     };
     
     showAddDialog.value = false;
@@ -297,7 +297,7 @@ const cancelAdd = () => {
     currentValue: 0,
     unit: "count",
     targetDate: "",
-    status: "in_progress"
+    status: "active"  
   };
   showAddDialog.value = false;
   message.value = "";
@@ -380,9 +380,8 @@ onMounted(() => {
           {{ (item.raw || item).currentValue }} {{ (item.raw || item).unit }}
         </template>
 
-        <!-- Target Date Column -->
-        <template v-slot:item.targetDate="{ item }">
-          {{ formatDate((item.raw || item).targetDate) }}
+         <template v-slot:item.endDate="{ item }">
+          {{ formatDate((item.raw || item).endDate || (item.raw || item).targetDate) }}
         </template>
 
         <!-- Status Column -->

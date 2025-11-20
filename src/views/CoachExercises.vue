@@ -14,7 +14,7 @@ const currentUser = computed(() => store.state.currentUser || store.state.loginU
 // Active tab
 const activeTab = ref('exercises')
 
-// Statistics - Use computed to read from localStorage
+// Statistics
 const athleteCount = computed(() => {
   const stored = Utils.getStore('athleteCount')
   return stored !== null && stored !== undefined ? stored : 0
@@ -38,8 +38,7 @@ const showAddDialog = ref(false)
 const newExercise = ref({
   name: '',
   description: '',
-  category: '',
-  muscleGroups: '',
+  muscleGroups: '',  // ✅ REMOVED: category, difficulty, instructions
   equipment: ''
 })
 
@@ -49,8 +48,8 @@ const filteredExercises = computed(() => {
   const query = searchQuery.value.toLowerCase()
   return exercises.value.filter(exercise => 
     exercise.name.toLowerCase().includes(query) ||
-    exercise.description.toLowerCase().includes(query) ||
-    exercise.category.toLowerCase().includes(query)
+    (exercise.description && exercise.description.toLowerCase().includes(query)) ||
+    (exercise.muscleGroup && exercise.muscleGroup.toLowerCase().includes(query))
   )
 })
 
@@ -70,7 +69,6 @@ const loadExercises = async () => {
     const response = await exerciseServices.getAllExercises()
     exercises.value = response.data
     
-    // Persist exercise count to localStorage
     Utils.setStore('exerciseCount', exercises.value.length)
   } catch (error) {
     console.error('Error loading exercises:', error)
@@ -96,7 +94,6 @@ const saveExercise = async () => {
     const response = await exerciseServices.createExercise(newExercise.value)
     exercises.value.push(response.data)
     
-    // Update exercise count in localStorage
     Utils.setStore('exerciseCount', exercises.value.length)
     
     closeAddDialog()
@@ -119,7 +116,6 @@ const deleteExercise = async (item) => {
       await exerciseServices.deleteExercise(item.id)
       exercises.value = exercises.value.filter(e => e.id !== item.id)
       
-      // Update exercise count in localStorage
       Utils.setStore('exerciseCount', exercises.value.length)
       
       alert('Exercise deleted successfully!')
@@ -145,7 +141,6 @@ const closeAddDialog = () => {
   newExercise.value = {
     name: '',
     description: '',
-    category: '',
     muscleGroups: '',
     equipment: ''
   }
@@ -155,14 +150,14 @@ onMounted(async () => {
   user.value = Utils.getStore("user") || currentUser.value
   
   if (!user.value) {
-    console.log('❌ No user found, redirecting to login')
+    console.log(' No user found, redirecting to login')
     router.push('/')
   } else if (user.value.role !== 'coach') {
-    console.log('❌ User is not a coach:', user.value.role)
+    console.log(' User is not a coach:', user.value.role)
     alert('Access denied. Coach role required.')
     router.push('/')
   } else {
-    console.log('✅ User is coach, loading exercises')
+    console.log(' User is coach, loading exercises')
     await loadExercises()
   }
 })
@@ -182,34 +177,35 @@ onMounted(async () => {
     
     <br />
 
+    <!-- Statistics Cards -->
     <v-row>
-  <v-col cols="12" sm="6" md="4">
-    <v-card color="primary" dark>
-      <v-card-text>
-        <div class="text-h6">My Athletes</div>
-        <div class="text-h3 font-weight-bold">{{ athleteCount }}</div>
-      </v-card-text>
-    </v-card>
-  </v-col>
+      <v-col cols="12" sm="6" md="4">
+        <v-card color="primary" dark>
+          <v-card-text>
+            <div class="text-h6">My Athletes</div>
+            <div class="text-h3 font-weight-bold">{{ athleteCount }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-  <v-col cols="12" sm="6" md="4">
-    <v-card color="info" dark>
-      <v-card-text>
-        <div class="text-h6">Exercises</div>
-        <div class="text-h3 font-weight-bold">{{ exerciseCount }}</div>
-      </v-card-text>
-    </v-card>
-  </v-col>
+      <v-col cols="12" sm="6" md="4">
+        <v-card color="info" dark>
+          <v-card-text>
+            <div class="text-h6">Exercises</div>
+            <div class="text-h3 font-weight-bold">{{ exerciseCount }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-  <v-col cols="12" sm="6" md="4">
-    <v-card color="warning" dark>
-      <v-card-text>
-        <div class="text-h6">Training Plans</div>
-        <div class="text-h3 font-weight-bold">{{ trainingPlans }}</div>
-      </v-card-text>
-    </v-card>
-  </v-col>
-</v-row>
+      <v-col cols="12" sm="6" md="4">
+        <v-card color="warning" dark>
+          <v-card-text>
+            <div class="text-h6">Training Plans</div>
+            <div class="text-h3 font-weight-bold">{{ trainingPlans }}</div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
 
     <br />
 
@@ -264,8 +260,7 @@ onMounted(async () => {
                 <div class="d-flex justify-space-between align-center mb-3">
                   <div>
                     <div class="text-h6 font-weight-bold">{{ exercise.name }}</div>
-                    <v-chip size="small" color="primary" class="mt-1">{{ exercise.category }}</v-chip>
-                  </div>
+                   </div>
                   <v-btn 
                     icon 
                     size="small" 
@@ -277,22 +272,22 @@ onMounted(async () => {
                   </v-btn>
                 </div>
 
-                <div class="text-body-2 text-grey mb-3">{{ exercise.description }}</div>
+                <div class="text-body-2 text-grey mb-3">{{ exercise.description || 'No description' }}</div>
 
                 <v-divider class="my-3"></v-divider>
 
                 <div class="d-flex justify-space-between mb-2">
                   <span class="text-body-2">Muscle Groups</span>
-                  <span class="font-weight-bold text-body-2">{{ exercise.muscleGroups || exercise.muscle_groups || '-' }}</span>
+                  <span class="font-weight-bold text-body-2">{{ exercise.muscleGroup || '-' }}</span>
                 </div>
                 <div class="d-flex justify-space-between mb-2">
                   <span class="text-body-2">Equipment</span>
-                  <span class="font-weight-bold text-body-2">{{ exercise.equipment || '-' }}</span>
+                  <span class="font-weight-bold text-body-2">{{ exercise.equipmentNeeded || '-' }}</span>
                 </div>
                 <div class="d-flex justify-space-between">
                   <span class="text-body-2">Type</span>
-                  <v-chip size="x-small" :color="exercise.type === 'Custom' ? 'secondary' : 'default'">
-                    {{ exercise.type || 'Standard' }}
+                  <v-chip size="x-small" :color="exercise.isStandard ? 'default' : 'secondary'">
+                    {{ exercise.isStandard ? 'Standard' : 'Custom' }}
                   </v-chip>
                 </div>
               </v-card-text>
@@ -311,7 +306,7 @@ onMounted(async () => {
     <!-- Add Exercise Dialog -->
     <v-dialog v-model="showAddDialog" max-width="600px">
       <v-card>
-        <v-card-title class="bg-primary">
+        <v-card-title class="bg-primary text-white">
           <span class="text-h5">Add New Exercise</span>
         </v-card-title>
 
@@ -343,12 +338,11 @@ onMounted(async () => {
             <v-row>
               <v-col cols="6">
                 <v-text-field
-                  v-model="newExercise.category"
-                  label="Category"
-                  placeholder="e.g., Strength, Cardio"
+                  v-model="newExercise.muscleGroups"
+                  label="Muscle Groups"
+                  placeholder="e.g., Chest, Triceps"
                   variant="outlined"
                   density="comfortable"
-                  required
                 ></v-text-field>
               </v-col>
               <v-col cols="6">
@@ -358,18 +352,9 @@ onMounted(async () => {
                   placeholder="e.g., Barbell, Dumbbells"
                   variant="outlined"
                   density="comfortable"
-                  required
                 ></v-text-field>
               </v-col>
             </v-row>
-
-            <v-text-field
-              v-model="newExercise.muscleGroups"
-              label="Muscle Groups"
-              placeholder="e.g., Chest, Triceps"
-              variant="outlined"
-              density="comfortable"
-            ></v-text-field>
           </v-form>
         </v-card-text>
 
