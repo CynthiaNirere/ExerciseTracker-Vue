@@ -71,37 +71,79 @@ onMounted(() => {
     
     <v-spacer></v-spacer>
     
-    <!-- Admin Menu -->
+    <!-- ========================================
+         ADMIN MENU
+         ======================================== -->
     <template v-if="user && user.role === 'admin'">
       <v-btn class="mx-2" :to="{ name: 'adminDashboard' }" variant="text">
+        
         Dashboard
       </v-btn>
       <v-btn class="mx-2" :to="{ name: 'userManagement' }" variant="text">
+        
         Users
       </v-btn>
       <v-btn class="mx-2" :to="{ name: 'exerciseManagement' }" variant="text">
+        
         Exercises
       </v-btn>
-      <!-- ADDED: Exercise Plans navigation button -->
       <v-btn class="mx-2" :to="{ name: 'exercisePlansManagement' }" variant="text">
-        Exercise Plans
+       
+        Plans
       </v-btn>
     </template>
     
-    <!-- Athlete Menu -->
+    <!-- ========================================
+         COACH MENU (ADDED!)
+         ======================================== -->
+    <template v-else-if="user && user.role === 'coach'">
+      <v-btn class="mx-2" :to="{ name: 'coachDashboard' }" variant="text">
+        
+        Dashboard
+      </v-btn>
+      <v-btn class="mx-2" :to="{ name: 'coach-exercises' }" variant="text">
+        
+        Exercises
+      </v-btn>
+      <v-btn class="mx-2" :to="{ name: 'coach-plans' }" variant="text">
+        
+        Plans
+      </v-btn>
+    </template>
+    
+    <!-- ========================================
+         ATHLETE MENU
+         ======================================== -->
     <template v-else-if="user && user.role === 'athlete'">
       <v-btn class="mx-2" :to="{ name: 'athleteDashboard' }" variant="text">
+        
         Dashboard
       </v-btn>
       <v-btn class="mx-2" :to="{ name: 'athleteProfile' }" variant="text">
+        
         Profile
       </v-btn>
+      <v-btn class="mx-2" :to="{ name: 'recordExercise' }" variant="text">
+        
+        Record
+      </v-btn>
       <v-btn class="mx-2" :to="{ name: 'athleteGoals' }" variant="text">
+        
         Goals
+      </v-btn>
+      <v-btn class="mx-2" :to="{ name: 'viewExerciseResults' }" variant="text">
+        
+        Results
+      </v-btn>
+      <v-btn class="mx-2" :to="{ name: 'athleteAssignedPlans' }" variant="text">
+        
+        Plans
       </v-btn>
     </template>
     
-    <!-- User Menu -->
+    <!-- ========================================
+         USER PROFILE MENU
+         ======================================== -->
     <v-menu v-if="user" location="bottom">
       <template v-slot:activator="{ props }">
         <v-btn v-bind="props" icon>
@@ -121,11 +163,13 @@ onMounted(() => {
             <p class="text-caption mt-1">{{ user.email }}</p>
             <v-chip
               size="small"
-              :color="user.role === 'admin'
-                ? 'error'
-                : user.role === 'coach'
-                ? 'primary'
-                : 'success'"
+              :color="
+                user.role === 'admin'
+                  ? 'error'
+                  : user.role === 'coach'
+                  ? 'primary'
+                  : 'success'
+              "
               class="my-2"
             >
               {{ user.role }}
@@ -141,3 +185,9 @@ onMounted(() => {
     </v-menu>
   </v-app-bar>
 </template>
+
+<style scoped>
+.v-btn {
+  text-transform: none;
+}
+</style>
