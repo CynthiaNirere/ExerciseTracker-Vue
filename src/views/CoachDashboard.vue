@@ -3,88 +3,68 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import Utils from '../config/utils'
-import athleteServices from '../services/athleteServices'  
+import userServices from '../services/userServices'
+import athleteServices from '../services/athleteServices'
+import exerciseServices from '../services/exerciseServices'
 
 const router = useRouter()
 const store = useStore()
 
 const user = ref(null)
-const currentUser = computed(() => {
-  try {
-    return store?.state?.currentUser || store?.state?.loginUser || null
-  } catch (e) {
-    return null
-  }
+const currentUser = computed(() => store.state.currentUser || store.state.loginUser)
+
+const athletes = ref([])
+const loading = ref(true)
+const error = ref(null)
+const successMessage = ref(null)
+
+const showAddAthleteDialog = ref(false)
+const showDeleteDialog = ref(false)
+const athleteToDelete = ref(null)
+const newAthlete = ref({
+  firstName: '',
+  lastName: '',
+  email: '',
+  age: null,
+  gender: '',
+  sportType: '',
+  team: '',
+  bio: ''
 })
 
-// Active tab
-const activeTab = ref('athletes')
-
-// Statistics
-const athleteCount = computed(() => {
-  const stored = Utils.getStore('athleteCount')
-  return stored !== null && stored !== undefined ? stored : 0
-})
+const athleteCount = computed(() => athletes.value.length)
 
 const exerciseCount = computed(() => {
   const stored = Utils.getStore('exerciseCount')
   return stored !== null && stored !== undefined ? stored : 0
 })
 
-const trainingPlans = computed(() => {
+const planCount = computed(() => {
   const stored = Utils.getStore('trainingPlans')
   return stored !== null && stored !== undefined ? stored : 0
 })
 
-// Athletes data
-const athletes = ref([])
-const loading = ref(true)
-const error = ref(null)
+const showSuccess = (message) => {
+  successMessage.value = message
+  setTimeout(() => {
+    successMessage.value = null
+  }, 3000)
+}
 
-// Add Athlete Dialog
-const showAddAthleteDialog = ref(false)
-const newAthlete = ref({
-  first_name: '',
-  last_name: '',
-  email: '',
-  age: null,
-  gender: '',
-  team: '',
-  sport_type: '',
-  bio: ''
-})
-
-// Fetch athletes from API using service
-const fetchAthletes = async () => {
+const loadAthletes = async () => {
   try {
     loading.value = true
     error.value = null
-    
-    const coachId = user.value?.userId || user.value?.user_id || currentUser.value?.userId || currentUser.value?.user_id
-    
-    console.log(' Fetching athletes for coach:', coachId)
-    
-    if (!coachId) {
-      console.error(' No coach ID found!')
-      error.value = 'Coach ID not found. Please log in again.'
-      loading.value = false
-      return
-    }
-
+    const coachId = user.value?.id || user.value?.userId
     const response = await athleteServices.getAthletesByCoach(coachId)
-    console.log(' Athletes loaded:', response.data)
-    
     athletes.value = response.data
     Utils.setStore('athleteCount', athletes.value.length)
-    
   } catch (err) {
-    console.error(' Error fetching athletes:', err)
-    
     if (err.response?.status === 401) {
       error.value = 'Session expired. Please log in again.'
       setTimeout(() => router.push('/'), 2000)
     } else {
-      error.value = 'Failed to load athletes'
+      error.value = 'Unable to load athletes. Please try again.'
     }
   } finally {
     loading.value = false
@@ -93,117 +73,115 @@ const fetchAthletes = async () => {
 
 const openAddAthleteDialog = () => {
   showAddAthleteDialog.value = true
-}
-
-const closeAddAthleteDialog = () => {
-  showAddAthleteDialog.value = false
   newAthlete.value = {
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     age: null,
     gender: '',
+    sportType: '',
     team: '',
-    sport_type: '',
     bio: ''
   }
 }
 
-const createAthlete = async () => {
-  try {
-    console.log('Creating athlete:', newAthlete.value)
-    
-    const coachId = user.value?.userId || user.value?.user_id || currentUser.value?.userId || currentUser.value?.user_id
-    
-    await athleteServices.createAthlete({
-      first_name: newAthlete.value.first_name,
-      last_name: newAthlete.value.last_name,
-      email: newAthlete.value.email,
-      role: 'athlete',
-      coach_id: coachId,
-      age: newAthlete.value.age,
-      gender: newAthlete.value.gender,
-      team: newAthlete.value.team,
-      sport_type: newAthlete.value.sport_type,
-      bio: newAthlete.value.bio
-    })
-    
-    console.log(' Athlete created successfully')
-    
-    await fetchAthletes()
-    closeAddAthleteDialog()
-    alert('Athlete added successfully!')
-    
-  } catch (err) {
-    console.error(' Error creating athlete:', err)
-    
-    if (err.response?.status === 401) {
-      alert('Session expired. Please log in again.')
-      router.push('/')
-    } else {
-      alert('Failed to create athlete: ' + (err.response?.data?.message || err.message))
-    }
-  }
+const closeAddAthleteDialog = () => {
+  showAddAthleteDialog.value = false
 }
 
-const changeTab = (tab) => {
-  console.log('Tab clicked:', tab)
-  if (tab === 'athletes') {
-    activeTab.value = 'athletes'
-  } else if (tab === 'exercises') {
-    router.push({ name: 'coach-exercises' })
-  } else if (tab === 'plans') {
-    router.push({ name: 'coach-plans' })
-  }
-}
-
-const goToAthleteDetail = (athleteId) => {
-  console.log(' Going to athlete detail:', athleteId)
-  
-  if (!athleteId) {
-    console.error(' No athlete ID provided')
-    alert('Cannot view athlete details - invalid athlete ID')
+const addAthlete = async () => {
+  if (!newAthlete.value.firstName || !newAthlete.value.lastName || !newAthlete.value.email) {
+    error.value = 'Please fill in all required fields'
     return
   }
-  
-  router.push({ 
-    name: 'athleteDetail', 
-    params: { id: athleteId } 
-  })
+
+  try {
+    const coachId = user.value?.id || user.value?.userId
+    
+    const athleteData = {
+      fName: newAthlete.value.firstName,
+      lName: newAthlete.value.lastName,
+      email: newAthlete.value.email,
+      password: 'defaultPassword123',
+      role: 'athlete',
+      age: newAthlete.value.age,
+      gender: newAthlete.value.gender,
+      sport_type: newAthlete.value.sportType,
+      team: newAthlete.value.team,
+      bio: newAthlete.value.bio,
+      coachId: coachId
+    }
+
+    const response = await userServices.createUser(athleteData)
+    athletes.value.push(response.data)
+    Utils.setStore('athleteCount', athletes.value.length)
+    
+    closeAddAthleteDialog()
+    showSuccess('Athlete added successfully')
+  } catch (err) {
+    if (err.response?.status === 401) {
+      error.value = 'Session expired. Please log in again.'
+      setTimeout(() => router.push('/'), 2000)
+    } else if (err.response?.status === 400) {
+      error.value = 'Email already exists. Please use a different email.'
+    } else {
+      error.value = err.response?.data?.message || 'Unable to add athlete. Please try again.'
+    }
+  }
 }
 
-const getInitials = (athlete) => {
-  const firstName = athlete?.first_name || athlete?.fName || athlete?.firstName
-  const lastName = athlete?.last_name || athlete?.lName || athlete?.lastName
-  
-  if (!firstName || !lastName) {
-    if (athlete?.email) {
-      const emailParts = athlete.email.split('@')[0].split('.')
-      if (emailParts.length >= 2) {
-        return `${emailParts[0][0]}${emailParts[1][0]}`.toUpperCase()
-      }
+const viewAthleteDetails = (athleteId) => {
+  router.push({ name: 'athleteDetail', params: { id: athleteId } })
+}
+
+const confirmDeleteAthlete = (athlete) => {
+  athleteToDelete.value = athlete
+  showDeleteDialog.value = true
+}
+
+const deleteAthlete = async () => {
+  if (!athleteToDelete.value) return
+
+  try {
+    await userServices.deleteUser(athleteToDelete.value.user_id)
+    athletes.value = athletes.value.filter(a => a.user_id !== athleteToDelete.value.user_id)
+    Utils.setStore('athleteCount', athletes.value.length)
+    showDeleteDialog.value = false
+    athleteToDelete.value = null
+    showSuccess('Athlete deleted successfully')
+  } catch (err) {
+    if (err.response?.status === 401) {
+      error.value = 'Session expired. Please log in again.'
+      setTimeout(() => router.push('/'), 2000)
+    } else {
+      error.value = 'Unable to delete athlete. Please try again.'
     }
-    return '??'
   }
-  
+}
+
+const goToExercises = () => {
+  router.push({ name: 'coach-exercises' })
+}
+
+const goToPlans = () => {
+  router.push({ name: 'coach-plans' })
+}
+
+const getInitials = (firstName, lastName) => {
+  if (!firstName || !lastName) return '??'
   return `${firstName[0]}${lastName[0]}`.toUpperCase()
 }
 
 onMounted(async () => {
-  console.log(' Coach Dashboard mounted')
-  
   user.value = Utils.getStore("user") || currentUser.value
   
   if (!user.value) {
-    console.log(' No user found, redirecting to login')
     router.push('/')
   } else if (user.value.role !== 'coach') {
-    console.log(' User is not a coach:', user.value.role)
-    alert('Access denied. Coach role required.')
-    router.push('/')
+    error.value = 'Access denied. Coach role required.'
+    setTimeout(() => router.push('/'), 2000)
   } else {
-    console.log('User is coach, fetching athletes')
-    await fetchAthletes()
+    await loadAthletes()
   }
 })
 </script>
@@ -213,11 +191,21 @@ onMounted(async () => {
     <v-toolbar color="primary" dark>
       <v-toolbar-title>Coach Dashboard</v-toolbar-title>
     </v-toolbar>
-    
+
     <br />
 
+    <!-- Success Message -->
+    <v-alert v-if="successMessage" type="success" class="mb-4" closable @click:close="successMessage = null">
+      {{ successMessage }}
+    </v-alert>
+
+    <!-- Error Message -->
+    <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
+      {{ error }}
+    </v-alert>
+
     <v-alert type="info">
-      Welcome, Coach {{ user?.first_name || user?.fName || 'Coach' }}!
+      Welcome, Coach {{ user?.first_name || user?.fName }}!
     </v-alert>
     
     <br />
@@ -234,7 +222,7 @@ onMounted(async () => {
       </v-col>
 
       <v-col cols="12" sm="6" md="4">
-        <v-card color="info" dark>
+        <v-card color="info" dark @click="goToExercises" style="cursor: pointer">
           <v-card-text>
             <div class="text-h6">Exercises</div>
             <div class="text-h3 font-weight-bold">{{ exerciseCount }}</div>
@@ -243,10 +231,10 @@ onMounted(async () => {
       </v-col>
 
       <v-col cols="12" sm="6" md="4">
-        <v-card color="warning" dark>
+        <v-card color="warning" dark @click="goToPlans" style="cursor: pointer">
           <v-card-text>
             <div class="text-h6">Training Plans</div>
-            <div class="text-h3 font-weight-bold">{{ trainingPlans }}</div>
+            <div class="text-h3 font-weight-bold">{{ planCount }}</div>
           </v-card-text>
         </v-card>
       </v-col>
@@ -254,79 +242,43 @@ onMounted(async () => {
 
     <br />
 
-    <!-- Tab Navigation -->
+    <!-- Athletes Section -->
     <v-card>
-      <v-tabs
-        v-model="activeTab"
-        bg-color="white"
-        color="primary"
-        @update:model-value="changeTab"
-      >
-        <v-tab value="athletes">Athletes</v-tab>
-        <v-tab value="exercises">Exercises</v-tab>
-        <v-tab value="plans">Plans</v-tab>
-      </v-tabs>
-
-      <!-- Athletes Content -->
-      <v-card-text v-if="activeTab === 'athletes'">
-        <!-- Add Athlete Button -->
-        <div class="d-flex justify-end mb-4">
+      <v-card-text>
+        <div class="d-flex justify-space-between align-center mb-4">
+          <div>
+            <div class="text-h5 font-weight-bold">My Athletes</div>
+            <div class="text-caption text-grey">Manage your athletes and track their progress</div>
+          </div>
           <v-btn color="primary" @click="openAddAthleteDialog">
             <v-icon left>mdi-plus</v-icon>
             Add Athlete
           </v-btn>
         </div>
 
-        <!-- Loading State -->
+        <!-- Loading -->
         <div v-if="loading" class="text-center py-8">
           <v-progress-circular indeterminate color="primary"></v-progress-circular>
           <p class="mt-4">Loading athletes...</p>
         </div>
 
-        <!-- Error State -->
-        <v-alert v-else-if="error" type="error" class="mb-4">
-          {{ error }}
-        </v-alert>
-
-        <!-- No Athletes -->
-        <v-alert v-else-if="athletes.length === 0" type="info" variant="tonal">
-          No athletes found. Start by adding athletes to your roster.
-        </v-alert>
-
-        <!-- Athletes List -->
-        <v-row v-else>
-          <v-col 
-            v-for="athlete in athletes" 
-            :key="athlete.user_id" 
-            cols="12" 
-            md="6"
-          >
-            <v-card 
-              @click="goToAthleteDetail(athlete.user_id)" 
-              hover
-              class="cursor-pointer"
-            >
+        <!-- Athletes Grid -->
+        <v-row v-else-if="athletes.length > 0">
+          <v-col v-for="athlete in athletes" :key="athlete.user_id" cols="12" sm="6" md="4">
+            <v-card elevation="2" hover>
               <v-card-text>
-                <div class="d-flex align-center mb-4">
-                  <v-avatar color="primary" size="56" class="mr-4">
-                    <span class="text-h6">
-                      {{ getInitials(athlete) }}
-                    </span>
+                <div class="d-flex align-center mb-3">
+                  <v-avatar color="primary" size="48" class="mr-3">
+                    <span class="text-h6">{{ getInitials(athlete.first_name, athlete.last_name) }}</span>
                   </v-avatar>
                   <div>
-                    <div class="text-h6 font-weight-bold">
-                      {{ athlete.first_name }} {{ athlete.last_name }}
-                    </div>
+                    <div class="text-h6 font-weight-bold">{{ athlete.first_name }} {{ athlete.last_name }}</div>
                     <div class="text-caption text-grey">{{ athlete.email }}</div>
                   </div>
                 </div>
 
                 <v-divider class="my-3"></v-divider>
 
-                <div class="d-flex justify-space-between mb-2">
-                  <span class="text-body-2">Age</span>
-                  <span class="font-weight-bold">{{ athlete.age || '-' }}</span>
-                </div>
                 <div class="d-flex justify-space-between mb-2">
                   <span class="text-body-2">Sport</span>
                   <span class="font-weight-bold">{{ athlete.sport_type || '-' }}</span>
@@ -335,43 +287,42 @@ onMounted(async () => {
                   <span class="text-body-2">Team</span>
                   <span class="font-weight-bold">{{ athlete.team || '-' }}</span>
                 </div>
-                <div class="d-flex justify-space-between mb-2">
-                  <span class="text-body-2">Total Workouts</span>
+                <div class="d-flex justify-space-between">
+                  <span class="text-body-2">Workouts</span>
                   <span class="font-weight-bold">{{ athlete.totalWorkouts || 0 }}</span>
                 </div>
-
-                <v-divider class="my-3"></v-divider>
-
-                <div class="text-caption text-grey">
-                  Gender: {{ athlete.gender || '-' }}
-                </div>
-                
-                <v-btn 
-                  block 
-                  color="primary" 
-                  variant="text" 
-                  class="mt-3"
-                  @click.stop="goToAthleteDetail(athlete.user_id)"
-                >
-                  Manage Athlete Profile & Goals
-                  <v-icon right>mdi-arrow-right</v-icon>
-                </v-btn>
               </v-card-text>
+
+              <v-card-actions>
+                <v-btn variant="text" color="primary" @click="viewAthleteDetails(athlete.user_id)">
+                  View Details
+                </v-btn>
+                <v-spacer></v-spacer>
+                <v-btn icon size="small" color="error" @click="confirmDeleteAthlete(athlete)">
+                  <v-icon>mdi-delete</v-icon>
+                </v-btn>
+              </v-card-actions>
             </v-card>
           </v-col>
         </v-row>
+
+        <!-- Empty State -->
+        <v-alert v-else type="info" variant="tonal">
+          No athletes yet. Click "Add Athlete" to get started!
+        </v-alert>
       </v-card-text>
     </v-card>
 
     <!-- Add Athlete Dialog -->
-    <v-dialog v-model="showAddAthleteDialog" max-width="700px">
+    <v-dialog v-model="showAddAthleteDialog" max-width="600px" persistent>
       <v-card>
-        <v-card-title class="bg-primary text-white">
-          <span class="text-h5">Add New Athlete</span>
-          <v-spacer></v-spacer>
-          <v-btn icon @click="closeAddAthleteDialog" variant="text" color="white">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
+        <v-card-title class="bg-primary">
+          <div class="d-flex justify-space-between align-center">
+            <span class="text-h5">Add New Athlete</span>
+            <v-btn icon variant="text" @click="closeAddAthleteDialog">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
         </v-card-title>
 
         <v-card-text class="pt-4">
@@ -379,7 +330,7 @@ onMounted(async () => {
             <v-row>
               <v-col cols="6">
                 <v-text-field
-                  v-model="newAthlete.first_name"
+                  v-model="newAthlete.firstName"
                   label="First Name *"
                   variant="outlined"
                   required
@@ -387,7 +338,7 @@ onMounted(async () => {
               </v-col>
               <v-col cols="6">
                 <v-text-field
-                  v-model="newAthlete.last_name"
+                  v-model="newAthlete.lastName"
                   label="Last Name *"
                   variant="outlined"
                   required
@@ -401,7 +352,6 @@ onMounted(async () => {
               type="email"
               variant="outlined"
               required
-              class="mb-3"
             ></v-text-field>
 
             <v-row>
@@ -423,7 +373,7 @@ onMounted(async () => {
               </v-col>
               <v-col cols="4">
                 <v-text-field
-                  v-model="newAthlete.sport_type"
+                  v-model="newAthlete.sportType"
                   label="Sport Type"
                   variant="outlined"
                 ></v-text-field>
@@ -434,7 +384,6 @@ onMounted(async () => {
               v-model="newAthlete.team"
               label="Team"
               variant="outlined"
-              class="mb-3"
             ></v-text-field>
 
             <v-textarea
@@ -443,33 +392,58 @@ onMounted(async () => {
               variant="outlined"
               rows="3"
             ></v-textarea>
-            
-            <v-alert type="info" variant="tonal" class="mt-3">
-              <strong>Note:</strong> Once added, you can manage this athlete's profile, exercise goals, and track their progress from the athlete detail page.
+
+            <v-alert type="info" variant="tonal" density="compact">
+              <small><strong>Note:</strong> Once added, you can manage this athlete's profile, exercise goals, and track their progress from the athlete detail page.</small>
             </v-alert>
           </v-form>
         </v-card-text>
 
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="closeAddAthleteDialog">
-            Cancel
-          </v-btn>
+          <v-btn variant="text" @click="closeAddAthleteDialog">Cancel</v-btn>
           <v-btn 
             color="primary" 
-            @click="createAthlete"
-            :disabled="!newAthlete.first_name || !newAthlete.last_name || !newAthlete.email"
+            @click="addAthlete"
+            :disabled="!newAthlete.firstName || !newAthlete.lastName || !newAthlete.email"
           >
             Add Athlete
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Delete Athlete Confirmation Dialog -->
+    <v-dialog v-model="showDeleteDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="bg-error text-white">
+          <v-icon left color="white">mdi-alert-circle</v-icon>
+          Delete Athlete
+        </v-card-title>
+
+        <v-card-text class="pt-6">
+          <div v-if="athleteToDelete" class="text-center">
+            <v-icon size="64" color="error" class="mb-4">mdi-account-remove</v-icon>
+            <p class="text-h6 mb-2">Are you sure you want to delete this athlete?</p>
+            <p class="text-body-1 font-weight-bold">{{ athleteToDelete.first_name }} {{ athleteToDelete.last_name }}</p>
+            <p class="text-caption text-grey">{{ athleteToDelete.email }}</p>
+            <v-alert type="warning" variant="tonal" class="mt-4">
+              <strong>Warning:</strong> This action cannot be undone. All athlete data, goals, and workout history will be permanently deleted.
+            </v-alert>
+          </div>
+        </v-card-text>
+
+        <v-card-actions class="px-6 pb-6">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="showDeleteDialog = false; athleteToDelete = null">
+            Cancel
+          </v-btn>
+          <v-btn color="error" @click="deleteAthlete">
+            <v-icon left>mdi-delete</v-icon>
+            Delete Athlete
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
-
-<style scoped>
-.cursor-pointer {
-  cursor: pointer;
-}
-</style>

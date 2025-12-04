@@ -1,15 +1,20 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import ExerciseServices from "../services/exerciseServices";
+import ExercisePlanServices from "../services/exercisePlanServices";
 import Utils from "../config/utils";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
 const valid = ref(true);
 const user = ref(null);
-const exercises = ref([]);
+const assignedPlans = ref([]);
+const planExercises = ref([]);
 const loading = ref(true);
+const loadingExercises = ref(false);
+const selectedPlanId = ref(null);
 const exerciseResult = ref({
+  athletePlanId: null,
   exerciseId: null,
   performedDate: new Date().toISOString().split('T')[0],
   durationMinutes: null,
@@ -21,34 +26,106 @@ const exerciseResult = ref({
 const message = ref("");
 
 // Validation rules
+const planRules = [
+  v => !!v || 'Please select a training plan'
+];
+
 const exerciseRules = [
-  v => !!v || 'Exercise is required'
+  v => !!v || 'Please select an exercise'
 ];
 
 const dateRules = [
   v => !!v || 'Date is required'
 ];
 
-// Load exercises from database
-const fetchExercises = async () => {
+// Load athlete's assigned plans
+const fetchAssignedPlans = async () => {
+  if (!user.value || !user.value.userId) {
+    message.value = "Error: User not logged in";
+    router.push({ name: "login" });
+    return;
+  }
+
   try {
     loading.value = true;
-    const response = await ExerciseServices.getAllExercises();
-    console.log("Fetched exercises:", response.data);
+    const athleteId = user.value.userId;
+    const response = await ExercisePlanServices.getPlansByAthlete(athleteId);
     
-    exercises.value = response.data || [];
+    console.log("Fetched assigned plans:", response.data);
     
-    if (exercises.value.length === 0) {
-      message.value = "No exercises found in database. Please add exercises first.";
+    // Format plans for dropdown
+    assignedPlans.value = (response.data || []).map(assignment => ({
+      value: assignment.assignmentId,
+      title: assignment.plan.name,
+      description: assignment.plan.description,
+      exercises: assignment.plan.exercises || [],
+      planId: assignment.plan.id
+    }));
+    
+    if (assignedPlans.value.length === 0) {
+      message.value = "No training plans assigned. Please contact your coach.";
     }
     
     loading.value = false;
   } catch (error) {
-    console.error("Error fetching exercises:", error);
-    message.value = "Error loading exercises: " + (error.response?.data?.message || error.message);
+    console.error("Error fetching assigned plans:", error);
+    message.value = "Error loading training plans: " + (error.response?.data?.message || error.message);
     loading.value = false;
   }
 };
+
+// Watch for plan selection changes
+watch(selectedPlanId, async (newPlanId) => {
+  if (!newPlanId) {
+    planExercises.value = [];
+    exerciseResult.value.athletePlanId = null;
+    exerciseResult.value.exerciseId = null;
+    return;
+  }
+
+  try {
+    loadingExercises.value = true;
+    exerciseResult.value.athletePlanId = newPlanId;
+    exerciseResult.value.exerciseId = null;
+    
+    // Find selected plan and get its exercises
+    const selectedPlan = assignedPlans.value.find(p => p.value === newPlanId);
+    
+    if (selectedPlan && selectedPlan.exercises) {
+      planExercises.value = selectedPlan.exercises.map(ex => ({
+        value: ex.id,
+        title: ex.name,
+        muscleGroup: ex.muscleGroup,
+        description: ex.description,
+        sets: ex.ExercisePlanItem?.sets || 3,
+        reps: ex.ExercisePlanItem?.reps || 10
+      }));
+      
+      console.log("Plan exercises:", planExercises.value);
+    } else {
+      planExercises.value = [];
+      message.value = "No exercises found in this plan";
+    }
+    
+    loadingExercises.value = false;
+  } catch (error) {
+    console.error("Error loading plan exercises:", error);
+    message.value = "Error loading exercises: " + error.message;
+    loadingExercises.value = false;
+  }
+});
+
+// Get selected plan details
+const getSelectedPlan = computed(() => {
+  if (!selectedPlanId.value) return null;
+  return assignedPlans.value.find(p => p.value === selectedPlanId.value);
+});
+
+// Get selected exercise details
+const getSelectedExercise = computed(() => {
+  if (!exerciseResult.value.exerciseId) return null;
+  return planExercises.value.find(ex => ex.value === exerciseResult.value.exerciseId);
+});
 
 // Save exercise result
 const saveExercise = async () => {
@@ -58,6 +135,11 @@ const saveExercise = async () => {
   }
 
   // Validate required fields
+  if (!selectedPlanId.value) {
+    message.value = "Error: Please select a training plan";
+    return;
+  }
+
   if (!exerciseResult.value.exerciseId) {
     message.value = "Error: Please select an exercise";
     return;
@@ -72,14 +154,14 @@ const saveExercise = async () => {
     // Transform frontend data to match backend expectations
     const data = {
       athleteId: user.value.userId,
+      athletePlanId: exerciseResult.value.athletePlanId,
       exerciseId: exerciseResult.value.exerciseId,
       performedDate: exerciseResult.value.performedDate,
       setsDone: exerciseResult.value.setsDone || null,
       repsDone: exerciseResult.value.repsDone || null,
       weightUsed: exerciseResult.value.weightUsed || null,
       durationSeconds: exerciseResult.value.durationMinutes ? exerciseResult.value.durationMinutes * 60 : null,
-      notes: exerciseResult.value.notes || null,
-      athletePlanId: null
+      notes: exerciseResult.value.notes || null
     };
 
     console.log("Sending exercise data:", data);
@@ -88,8 +170,9 @@ const saveExercise = async () => {
     
     message.value = "Exercise result recorded successfully!";
     
-    // Reset form
+    // Reset form (keep plan selected for easy consecutive entries)
     exerciseResult.value = {
+      athletePlanId: exerciseResult.value.athletePlanId,
       exerciseId: null,
       performedDate: new Date().toISOString().split('T')[0],
       durationMinutes: null,
@@ -109,12 +192,6 @@ const saveExercise = async () => {
   }
 };
 
-// Get selected exercise details
-const getSelectedExercise = () => {
-  if (!exerciseResult.value.exerciseId) return null;
-  return exercises.value.find(ex => ex.id === exerciseResult.value.exerciseId);
-};
-
 const cancel = () => {
   router.push({ name: "athleteDashboard" });
 };
@@ -126,7 +203,7 @@ const viewResults = () => {
 onMounted(() => {
   user.value = Utils.getStore("user");
   console.log("User loaded:", user.value);
-  fetchExercises();
+  fetchAssignedPlans();
 });
 </script>
 
@@ -136,7 +213,7 @@ onMounted(() => {
       <v-btn icon @click="cancel">
         <v-icon>mdi-arrow-left</v-icon>
       </v-btn>
-      <v-toolbar-title class="text-white">Record Exercise Results</v-toolbar-title>
+      <v-toolbar-title class="text-white">Record Exercise from Plan</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn 
         color="white" 
@@ -164,7 +241,7 @@ onMounted(() => {
     <v-card v-if="loading">
       <v-card-text class="text-center">
         <v-progress-circular indeterminate color="success"></v-progress-circular>
-        <p class="mt-4">Loading exercises...</p>
+        <p class="mt-4">Loading training plans...</p>
       </v-card-text>
     </v-card>
 
@@ -176,14 +253,57 @@ onMounted(() => {
       
       <v-card-text>
         <v-form v-model="valid">
-          <!-- Exercise Selection -->
+          <!-- Step 1: Select Training Plan -->
+          <v-select
+            v-model="selectedPlanId"
+            :items="assignedPlans"
+            item-title="title"
+            item-value="value"
+            label="Training Plan *"
+            :rules="planRules"
+            required
+            hint="Select the training plan you're working on"
+            persistent-hint
+            class="mb-2"
+          >
+            <template v-slot:item="{ props, item }">
+              <v-list-item v-bind="props">
+                <template v-slot:subtitle>
+                  <small v-if="item.raw.description">{{ item.raw.description }}</small>
+                  <small v-if="item.raw.exercises">
+                    <br />{{ item.raw.exercises.length }} exercises
+                  </small>
+                </template>
+              </v-list-item>
+            </template>
+          </v-select>
+
+          <!-- Selected Plan Info -->
+          <v-alert 
+            v-if="getSelectedPlan" 
+            type="info" 
+            density="compact"
+            class="mb-4"
+          >
+            <div><strong>{{ getSelectedPlan.title }}</strong></div>
+            <div v-if="getSelectedPlan.description">
+              <small>{{ getSelectedPlan.description }}</small>
+            </div>
+            <div>
+              <small>{{ getSelectedPlan.exercises.length }} exercises available</small>
+            </div>
+          </v-alert>
+
+          <!-- Step 2: Select Exercise from Plan -->
           <v-select
             v-model="exerciseResult.exerciseId"
-            :items="exercises"
-            item-title="name"
-            item-value="id"
+            :items="planExercises"
+            item-title="title"
+            item-value="value"
             label="Exercise *"
             :rules="exerciseRules"
+            :disabled="!selectedPlanId || loadingExercises"
+            :loading="loadingExercises"
             required
             hint="Select the exercise you performed"
             persistent-hint
@@ -193,7 +313,9 @@ onMounted(() => {
               <v-list-item v-bind="props">
                 <template v-slot:subtitle>
                   <small v-if="item.raw.muscleGroup">{{ item.raw.muscleGroup }}</small>
-                  <small v-if="item.raw.description"> - {{ item.raw.description }}</small>
+                  <small v-if="item.raw.sets && item.raw.reps">
+                    • Recommended: {{ item.raw.sets }} sets × {{ item.raw.reps }} reps
+                  </small>
                 </template>
               </v-list-item>
             </template>
@@ -201,17 +323,17 @@ onMounted(() => {
 
           <!-- Selected Exercise Info -->
           <v-alert 
-            v-if="getSelectedExercise()" 
-            type="info" 
+            v-if="getSelectedExercise" 
+            type="success" 
             density="compact"
             class="mb-4"
           >
-            <div><strong>{{ getSelectedExercise().name }}</strong></div>
-            <div v-if="getSelectedExercise().muscleGroup">
-              <small>Muscle Group: {{ getSelectedExercise().muscleGroup }}</small>
+            <div><strong>{{ getSelectedExercise.title }}</strong></div>
+            <div v-if="getSelectedExercise.muscleGroup">
+              <small>Muscle Group: {{ getSelectedExercise.muscleGroup }}</small>
             </div>
-            <div v-if="getSelectedExercise().description">
-              <small>{{ getSelectedExercise().description }}</small>
+            <div v-if="getSelectedExercise.sets && getSelectedExercise.reps">
+              <small>Recommended: {{ getSelectedExercise.sets }} sets × {{ getSelectedExercise.reps }} reps</small>
             </div>
           </v-alert>
 
@@ -239,7 +361,6 @@ onMounted(() => {
             hint="Total workout duration (optional)"
             persistent-hint
             class="mb-2"
-            
           ></v-text-field>
 
           <!-- Sets and Reps -->
@@ -251,9 +372,8 @@ onMounted(() => {
                 type="number"
                 min="0"
                 step="1"
-                hint="Number of sets (optional)"
+                :hint="getSelectedExercise?.sets ? `Recommended: ${getSelectedExercise.sets}` : 'Number of sets (optional)'"
                 persistent-hint
-                
               ></v-text-field>
             </v-col>
             <v-col cols="6">
@@ -263,9 +383,8 @@ onMounted(() => {
                 type="number"
                 min="0"
                 step="1"
-                hint="Reps per set (optional)"
+                :hint="getSelectedExercise?.reps ? `Recommended: ${getSelectedExercise.reps}` : 'Reps per set (optional)'"
                 persistent-hint
-               
               ></v-text-field>
             </v-col>
           </v-row>
@@ -280,7 +399,6 @@ onMounted(() => {
             hint="Weight used (optional)"
             persistent-hint
             class="mb-2"
-            
           ></v-text-field>
 
           <!-- Notes -->
@@ -290,7 +408,6 @@ onMounted(() => {
             rows="3"
             hint="Add any notes about your workout (optional)"
             persistent-hint
-           
           ></v-textarea>
 
           <v-alert type="info" density="compact" class="mt-3">
@@ -307,7 +424,7 @@ onMounted(() => {
         </v-btn>
         <v-btn
           color="success"
-          :disabled="!valid || !exerciseResult.exerciseId || !exerciseResult.performedDate"
+          :disabled="!valid || !selectedPlanId || !exerciseResult.exerciseId || !exerciseResult.performedDate"
           @click="saveExercise"
         >
           <v-icon>mdi-content-save</v-icon>
@@ -316,31 +433,37 @@ onMounted(() => {
       </v-card-actions>
     </v-card>
 
-    <!-- Quick Stats Card -->
+    <!-- Help Card -->
     <v-card class="mt-4" v-if="!loading">
       <v-card-title>
         <v-icon class="mr-2" color="info">mdi-information-outline</v-icon>
-        Tips
+        How to Record
       </v-card-title>
       <v-card-text>
         <v-list density="compact">
           <v-list-item>
             <template v-slot:prepend>
-              <v-icon color="success">mdi-check-circle</v-icon>
+              <v-icon color="success">mdi-numeric-1-circle</v-icon>
             </template>
-            <v-list-item-title>Select the exercise from the dropdown</v-list-item-title>
+            <v-list-item-title>Select your training plan</v-list-item-title>
           </v-list-item>
           <v-list-item>
             <template v-slot:prepend>
-              <v-icon color="success">mdi-check-circle</v-icon>
+              <v-icon color="success">mdi-numeric-2-circle</v-icon>
             </template>
-            <v-list-item-title>Fill in the fields that apply to your workout</v-list-item-title>
+            <v-list-item-title>Choose the exercise you performed</v-list-item-title>
           </v-list-item>
           <v-list-item>
             <template v-slot:prepend>
-              <v-icon color="success">mdi-check-circle</v-icon>
+              <v-icon color="success">mdi-numeric-3-circle</v-icon>
             </template>
-            <v-list-item-title>Add notes to track your progress over time</v-list-item-title>
+            <v-list-item-title>Fill in your workout details</v-list-item-title>
+          </v-list-item>
+          <v-list-item>
+            <template v-slot:prepend>
+              <v-icon color="success">mdi-numeric-4-circle</v-icon>
+            </template>
+            <v-list-item-title>Save and track your progress!</v-list-item-title>
           </v-list-item>
         </v-list>
       </v-card-text>

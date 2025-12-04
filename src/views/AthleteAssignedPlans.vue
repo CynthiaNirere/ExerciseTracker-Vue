@@ -109,14 +109,6 @@ onMounted(async () => {
               <span class="text-body-2">Assigned Date</span>
               <span class="font-weight-bold">{{ formatDate(assignment.assignedDate) }}</span>
             </div>
-            <div class="d-flex justify-space-between mb-2">
-              <span class="text-body-2">Duration</span>
-              <span class="font-weight-bold">{{ assignment.plan.duration || '-' }}</span>
-            </div>
-            <div class="d-flex justify-space-between mb-2">
-              <span class="text-body-2">Difficulty</span>
-              <span class="font-weight-bold">{{ assignment.plan.difficulty || '-' }}</span>
-            </div>
             <div class="d-flex justify-space-between">
               <span class="text-body-2">Exercises</span>
               <span class="font-weight-bold">{{ assignment.plan.exerciseCount || 0 }}</span>

@@ -33,12 +33,16 @@ const trainingPlans = computed(() => {
 // Exercise management
 const exercises = ref([])
 const loading = ref(true)
+const error = ref(null)
+const successMessage = ref(null)
 const searchQuery = ref('')
 const showAddDialog = ref(false)
+const showDeleteDialog = ref(false)
+const exerciseToDelete = ref(null)
 const newExercise = ref({
   name: '',
   description: '',
-  muscleGroups: '',  // ✅ REMOVED: category, difficulty, instructions
+  muscleGroups: '',
   equipment: ''
 })
 
@@ -53,6 +57,13 @@ const filteredExercises = computed(() => {
   )
 })
 
+const showSuccess = (message) => {
+  successMessage.value = message
+  setTimeout(() => {
+    successMessage.value = null
+  }, 3000)
+}
+
 const changeTab = (tab) => {
   if (tab === 'athletes') {
     router.push({ name: 'coachDashboard' })
@@ -66,18 +77,16 @@ const changeTab = (tab) => {
 const loadExercises = async () => {
   try {
     loading.value = true
+    error.value = null
     const response = await exerciseServices.getAllExercises()
     exercises.value = response.data
-    
     Utils.setStore('exerciseCount', exercises.value.length)
-  } catch (error) {
-    console.error('Error loading exercises:', error)
-    
-    if (error.response?.status === 401) {
-      alert('Session expired. Please log in again.')
-      router.push('/')
+  } catch (err) {
+    if (err.response?.status === 401) {
+      error.value = 'Session expired. Please log in again.'
+      setTimeout(() => router.push('/'), 2000)
     } else {
-      alert('Failed to load exercises')
+      error.value = 'Unable to load exercises. Please try again.'
     }
   } finally {
     loading.value = false
@@ -86,48 +95,47 @@ const loadExercises = async () => {
 
 const saveExercise = async () => {
   if (!newExercise.value.name || !newExercise.value.description) {
-    alert('Please fill in all required fields')
+    error.value = 'Please fill in all required fields'
     return
   }
 
   try {
     const response = await exerciseServices.createExercise(newExercise.value)
     exercises.value.push(response.data)
-    
     Utils.setStore('exerciseCount', exercises.value.length)
-    
     closeAddDialog()
-    alert('Exercise created successfully!')
-  } catch (error) {
-    console.error('Error creating exercise:', error)
-    
-    if (error.response?.status === 401) {
-      alert('Session expired. Please log in again.')
-      router.push('/')
+    showSuccess('Exercise created successfully')
+  } catch (err) {
+    if (err.response?.status === 401) {
+      error.value = 'Session expired. Please log in again.'
+      setTimeout(() => router.push('/'), 2000)
     } else {
-      alert('Failed to create exercise: ' + (error.response?.data?.message || error.message))
+      error.value = err.response?.data?.message || 'Unable to create exercise. Please try again.'
     }
   }
 }
 
-const deleteExercise = async (item) => {
-  if (confirm(`Delete "${item.name}"?`)) {
-    try {
-      await exerciseServices.deleteExercise(item.id)
-      exercises.value = exercises.value.filter(e => e.id !== item.id)
-      
-      Utils.setStore('exerciseCount', exercises.value.length)
-      
-      alert('Exercise deleted successfully!')
-    } catch (error) {
-      console.error('Error deleting exercise:', error)
-      
-      if (error.response?.status === 401) {
-        alert('Session expired. Please log in again.')
-        router.push('/')
-      } else {
-        alert('Failed to delete exercise')
-      }
+const confirmDeleteExercise = (item) => {
+  exerciseToDelete.value = item
+  showDeleteDialog.value = true
+}
+
+const deleteExercise = async () => {
+  if (!exerciseToDelete.value) return
+
+  try {
+    await exerciseServices.deleteExercise(exerciseToDelete.value.id)
+    exercises.value = exercises.value.filter(e => e.id !== exerciseToDelete.value.id)
+    Utils.setStore('exerciseCount', exercises.value.length)
+    showDeleteDialog.value = false
+    exerciseToDelete.value = null
+    showSuccess('Exercise deleted successfully')
+  } catch (err) {
+    if (err.response?.status === 401) {
+      error.value = 'Session expired. Please log in again.'
+      setTimeout(() => router.push('/'), 2000)
+    } else {
+      error.value = 'Unable to delete exercise. Please try again.'
     }
   }
 }
@@ -150,14 +158,11 @@ onMounted(async () => {
   user.value = Utils.getStore("user") || currentUser.value
   
   if (!user.value) {
-    console.log(' No user found, redirecting to login')
     router.push('/')
   } else if (user.value.role !== 'coach') {
-    console.log(' User is not a coach:', user.value.role)
-    alert('Access denied. Coach role required.')
-    router.push('/')
+    error.value = 'Access denied. Coach role required.'
+    setTimeout(() => router.push('/'), 2000)
   } else {
-    console.log(' User is coach, loading exercises')
     await loadExercises()
   }
 })
@@ -170,6 +175,16 @@ onMounted(async () => {
     </v-toolbar>
 
     <br />
+
+    <!-- Success Message -->
+    <v-alert v-if="successMessage" type="success" class="mb-4" closable @click:close="successMessage = null">
+      {{ successMessage }}
+    </v-alert>
+
+    <!-- Error Message -->
+    <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
+      {{ error }}
+    </v-alert>
 
     <v-alert type="info">
       Welcome, Coach {{ user?.first_name || user?.fName }}!
@@ -260,13 +275,13 @@ onMounted(async () => {
                 <div class="d-flex justify-space-between align-center mb-3">
                   <div>
                     <div class="text-h6 font-weight-bold">{{ exercise.name }}</div>
-                   </div>
+                  </div>
                   <v-btn 
                     icon 
                     size="small" 
                     color="error" 
                     variant="text"
-                    @click="deleteExercise(exercise)"
+                    @click="confirmDeleteExercise(exercise)"
                   >
                     <v-icon>mdi-delete</v-icon>
                   </v-btn>
@@ -369,6 +384,39 @@ onMounted(async () => {
             :disabled="!newExercise.name || !newExercise.description"
           >
             Save Exercise
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Delete Exercise Confirmation Dialog -->
+    <v-dialog v-model="showDeleteDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="bg-error text-white">
+          <v-icon left color="white">mdi-alert-circle</v-icon>
+          Delete Exercise
+        </v-card-title>
+
+        <v-card-text class="pt-6">
+          <div v-if="exerciseToDelete" class="text-center">
+            <v-icon size="64" color="error" class="mb-4">mdi-dumbbell</v-icon>
+            <p class="text-h6 mb-2">Are you sure you want to delete this exercise?</p>
+            <p class="text-body-1 font-weight-bold">{{ exerciseToDelete.name }}</p>
+            <p class="text-caption text-grey mb-4">{{ exerciseToDelete.description }}</p>
+            <v-alert type="warning" variant="tonal">
+              <strong>Warning:</strong> This action cannot be undone. The exercise will be permanently removed from your library.
+            </v-alert>
+          </div>
+        </v-card-text>
+
+        <v-card-actions class="px-6 pb-6">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="showDeleteDialog = false; exerciseToDelete = null">
+            Cancel
+          </v-btn>
+          <v-btn color="error" @click="deleteExercise">
+            <v-icon left>mdi-delete</v-icon>
+            Delete Exercise
           </v-btn>
         </v-card-actions>
       </v-card>

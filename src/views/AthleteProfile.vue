@@ -8,6 +8,7 @@ const router = useRouter();
 const valid = ref(true);
 const user = ref(null);
 const loading = ref(true);
+const debugInfo = ref("");
 
 const profile = ref({
   fName: "",
@@ -17,42 +18,60 @@ const profile = ref({
 });
 
 const message = ref("");
+const showDebug = ref(false);
 
 // Load current user profile
 const loadProfile = async () => {
   try {
     user.value = Utils.getStore("user");
+    debugInfo.value += ` User from localStorage: ${JSON.stringify(user.value)}\n`;
+    
     if (!user.value || !user.value.userId) {
       message.value = "Error: User not logged in";
       router.push({ name: "login" });
       return;
     }
     
-    // Load user basic info from localStorage
+    // Load user basic info
     profile.value.fName = user.value.fName || "";
     profile.value.lName = user.value.lName || "";
     profile.value.email = user.value.email || "";
     
-    // Load athlete profile data (bio)
+    debugInfo.value += `Loading profile for athlete ID: ${user.value.userId}\n`;
+    
+    // Load athlete profile (bio)
     try {
       const athleteResponse = await athleteServices.getAthleteProfile();
-      console.log("Athlete profile loaded:", athleteResponse.data);
+      debugInfo.value += ` Profile API response: ${JSON.stringify(athleteResponse.data)}\n`;
       
       if (athleteResponse.data) {
         profile.value.bio = athleteResponse.data.bio || "";
+        debugInfo.value += ` Bio loaded successfully: "${profile.value.bio}"\n`;
+      } else {
+        debugInfo.value += ` No profile data returned\n`;
+        message.value = "Profile exists but no data returned.";
       }
     } catch (athleteError) {
-      console.log("No athlete profile found, will create on save");
+      debugInfo.value += ` Profile API error: ${athleteError.message}\n`;
+      debugInfo.value += ` Status: ${athleteError.response?.status}\n`;
+      debugInfo.value += ` Response: ${JSON.stringify(athleteError.response?.data)}\n`;
+      
+      if (athleteError.response?.status === 404) {
+        message.value = "No profile found yet. Create one by saving your bio below.";
+      } else {
+        message.value = `Error loading profile: ${athleteError.response?.data?.message || athleteError.message}`;
+      }
     }
     
     loading.value = false;
   } catch (error) {
+    debugInfo.value += ` General error: ${error.message}\n`;
     message.value = "Error loading profile: " + error.message;
     loading.value = false;
   }
 };
 
-// Update profile (bio only)
+// Update profile
 const updateProfile = async () => {
   if (!user.value || !user.value.userId) {
     message.value = "Error: User not found";
@@ -60,17 +79,26 @@ const updateProfile = async () => {
   }
   
   try {
-    // Update only bio in athlete profile
-    const athleteUpdate = {
-      bio: profile.value.bio
-    };
+    debugInfo.value += `\n Attempting to update bio...\n`;
+    debugInfo.value += `New bio: "${profile.value.bio}"\n`;
     
-    await athleteServices.updateAthleteProfile(athleteUpdate);
+    const athleteUpdate = { bio: profile.value.bio };
+    
+    const response = await athleteServices.updateAthleteProfile(athleteUpdate);
+    debugInfo.value += ` Update response: ${JSON.stringify(response.data)}\n`;
     
     message.value = "Bio updated successfully!";
+    
+    // Reload to verify
+    setTimeout(async () => {
+      await loadProfile();
+    }, 1000);
+    
   } catch (error) {
+    debugInfo.value += `Update error: ${error.message}\n`;
+    debugInfo.value += ` Response: ${JSON.stringify(error.response?.data)}\n`;
+    
     message.value = "Error updating profile: " + (error.response?.data?.message || error.message);
-    console.error("Update error:", error);
   }
 };
 
@@ -90,14 +118,37 @@ onMounted(() => {
         <v-icon>mdi-arrow-left</v-icon>
       </v-btn>
       <v-toolbar-title class="text-white">Edit Profile</v-toolbar-title>
+      <v-spacer></v-spacer>
     </v-toolbar>
     
     <br />
     
+    <!-- Debug Panel -->
+    <v-card v-if="showDebug" class="mb-4" color="grey-lighten-4">
+      <v-card-title class="text-h6 bg-warning">
+         Debug Information
+      </v-card-title>
+      <v-card-text>
+        <pre style="white-space: pre-wrap; font-family: monospace; font-size: 11px; max-height: 400px; overflow-y: auto;">{{ debugInfo }}</pre>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn size="small" color="primary" @click="loadProfile">
+          <v-icon left>mdi-refresh</v-icon>
+          Reload Profile
+        </v-btn>
+        <v-btn size="small" @click="debugInfo = ''">
+          <v-icon left>mdi-delete</v-icon>
+          Clear Logs
+        </v-btn>
+        <v-spacer></v-spacer>
+        <v-btn size="small" @click="showDebug = false">Close</v-btn>
+      </v-card-actions>
+    </v-card>
+    
     <!-- Message Display -->
     <v-alert
       v-if="message"
-      :type="message.includes('Error') ? 'error' : 'success'"
+      :type="message.includes('Error') ? 'error' : message.includes('successfully') ? 'success' : 'info'"
       closable
       @click:close="message = ''"
     >
@@ -155,15 +206,14 @@ onMounted(() => {
             rows="4"
             hint="Tell us about yourself, your fitness goals, or training history"
             persistent-hint
+            :placeholder="profile.bio ? '' : 'Enter your bio here...'"
           ></v-textarea>
-          
-          <v-alert type="info" density="compact" class="mt-3">
-            <small>You can only edit your bio. Contact your coach or admin to update other information.</small>
-          </v-alert>
+        
         </v-form>
       </v-card-text>
       
       <v-card-actions>
+       
         <v-spacer></v-spacer>
         <v-btn color="error" @click="cancel">Cancel</v-btn>
         <v-btn
@@ -171,6 +221,7 @@ onMounted(() => {
           :disabled="!valid"
           @click="updateProfile"
         >
+          <v-icon left>mdi-content-save</v-icon>
           Save Bio
         </v-btn>
       </v-card-actions>

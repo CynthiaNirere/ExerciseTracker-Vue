@@ -18,12 +18,14 @@ const newGoal = ref({
   currentValue: 0,
   unit: "count",
   targetDate: "",
-  status: "active"  // ✅ FIXED: Changed from 'in_progress' to 'active'
+  status: "active"
 });
 const selectedGoal = ref(null);
 const message = ref("");
 const showAddDialog = ref(false);
 const showEditDialog = ref(false);
+const showDeleteDialog = ref(false);
+const goalToDelete = ref(null);
 
 // Unit options for dropdown
 const unitOptions = [
@@ -37,7 +39,7 @@ const unitOptions = [
   { title: "Percentage (%)", value: "percentage" }
 ];
 
-// Status options - ✅ FIXED: Updated status values
+// Status options
 const statusOptions = [
   { title: "Active", value: "active" },
   { title: "Completed", value: "completed" },
@@ -74,11 +76,6 @@ const targetDateRules = [
   }
 ];
 
-// Edit validation rules (no date restriction)
-const editTargetDateRules = [
-  v => !!v || 'Target date is required'
-];
-
 // Table headers
 const headers = [
   { title: 'Title', key: 'title' },
@@ -86,7 +83,8 @@ const headers = [
   { title: 'Target', key: 'targetValue' },
   { title: 'Current', key: 'currentValue' },
   { title: 'Unit', key: 'unit' },
-  { title: 'Target Date', key: 'endDate' },  // ✅ FIXED: Changed from targetDate to endDate
+  { title: 'Target Date', key: 'endDate' },
+  { title: 'Created By', key: 'creator' },  // ✅ NEW
   { title: 'Status', key: 'status' },
   { title: 'Actions', key: 'actions', sortable: false }
 ];
@@ -125,11 +123,14 @@ const fetchGoals = async () => {
     loading.value = true;
     const response = await GoalServices.getGoalsByAthlete(user.value.userId);
     
-    // ✅ FIXED: Map endDate to targetDate for display
     goals.value = (response.data || []).map(goal => ({
       ...goal,
       targetDate: goal.endDate ? goal.endDate.split('T')[0] : null,
-      unit: goal.unit || 'count'
+      unit: goal.unit || 'count',
+      // ✅ NEW: Format creator display
+      creatorDisplay: goal.creatorName 
+        ? `${goal.creatorName} (${goal.creatorRole === 'coach' ? 'Coach' : 'You'})`
+        : 'You'
     }));
     
     message.value = "";
@@ -193,7 +194,7 @@ const saveGoal = async () => {
       currentValue: 0,
       unit: "count",
       targetDate: "",
-      status: "active"  // ✅ FIXED
+      status: "active"
     };
     
     showAddDialog.value = false;
@@ -274,17 +275,24 @@ const updateGoal = async () => {
   }
 };
 
-// Delete goal
-const deleteGoal = async (id) => {
-  if (confirm("Are you sure you want to delete this goal?")) {
-    try {
-      await GoalServices.deleteGoal(id);
-      message.value = "Goal deleted successfully";
-      fetchGoals();
-    } catch (error) {
-      message.value = "Error deleting goal: " + (error.response?.data?.message || error.message);
-      console.error("Delete error:", error);
-    }
+// Delete goal functions
+const confirmDeleteGoal = (goal) => {
+  goalToDelete.value = goal;
+  showDeleteDialog.value = true;
+};
+
+const deleteGoal = async () => {
+  if (!goalToDelete.value) return;
+  
+  try {
+    await GoalServices.deleteGoal(goalToDelete.value.id);
+    showDeleteDialog.value = false;
+    goalToDelete.value = null;
+    message.value = "Goal deleted successfully";
+    fetchGoals();
+  } catch (error) {
+    message.value = "Error deleting goal: " + (error.response?.data?.message || error.message);
+    console.error("Delete error:", error);
   }
 };
 
@@ -380,8 +388,22 @@ onMounted(() => {
           {{ (item.raw || item).currentValue }} {{ (item.raw || item).unit }}
         </template>
 
-         <template v-slot:item.endDate="{ item }">
+        <!-- Target Date Column -->
+        <template v-slot:item.endDate="{ item }">
           {{ formatDate((item.raw || item).endDate || (item.raw || item).targetDate) }}
+        </template>
+
+        <!-- ✅ NEW: Creator Column -->
+        <template v-slot:item.creator="{ item }">
+          <v-chip
+            size="small"
+            :color="(item.raw || item).creatorRole === 'coach' ? 'primary' : 'success'"
+          >
+            <v-icon left size="small">
+              {{ (item.raw || item).creatorRole === 'coach' ? 'mdi-account-tie' : 'mdi-account' }}
+            </v-icon>
+            {{ (item.raw || item).creatorDisplay || 'You' }}
+          </v-chip>
         </template>
 
         <!-- Status Column -->
@@ -412,7 +434,7 @@ onMounted(() => {
           <v-btn
             color="error"
             size="small"
-            @click="deleteGoal((item.raw || item).id)"
+            @click="confirmDeleteGoal(item.raw || item)"
           >
             <v-icon size="small">mdi-delete</v-icon>
             Delete
@@ -597,6 +619,39 @@ onMounted(() => {
             @click="updateGoal"
           >
             Update
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Delete Goal Confirmation Dialog -->
+    <v-dialog v-model="showDeleteDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="bg-error text-white">
+          <v-icon left color="white">mdi-alert-circle</v-icon>
+          Delete Goal
+        </v-card-title>
+
+        <v-card-text class="pt-6">
+          <div v-if="goalToDelete" class="text-center">
+            <v-icon size="64" color="error" class="mb-4">mdi-flag-remove</v-icon>
+            <p class="text-h6 mb-2">Are you sure you want to delete this goal?</p>
+            <p class="text-body-1 font-weight-bold">{{ goalToDelete.title }}</p>
+            <p class="text-caption text-grey mb-2">Target: {{ goalToDelete.targetValue }} {{ goalToDelete.unit }}</p>
+            <v-alert type="warning" variant="tonal" class="mt-4">
+              <strong>Warning:</strong> This action cannot be undone. All progress tracking for this goal will be permanently deleted.
+            </v-alert>
+          </div>
+        </v-card-text>
+
+        <v-card-actions class="px-6 pb-6">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="showDeleteDialog = false; goalToDelete = null">
+            Cancel
+          </v-btn>
+          <v-btn color="error" @click="deleteGoal">
+            <v-icon left>mdi-delete</v-icon>
+            Delete Goal
           </v-btn>
         </v-card-actions>
       </v-card>
