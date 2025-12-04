@@ -146,7 +146,7 @@ onMounted(() => {
         Manage the exercise library
       </v-card-subtitle>
 
-      <!-- Message Display -->
+      
       <v-alert
         v-if="message"
         :type="message.includes('Error') ? 'error' : 'success'"
@@ -157,7 +157,7 @@ onMounted(() => {
         {{ message }}
       </v-alert>
 
-      <!-- Exercises Table -->
+     
       <v-card-text class="pa-6 pt-0">
         <v-data-table
           :headers="headers"
@@ -166,7 +166,7 @@ onMounted(() => {
           class="elevation-1"
           :items-per-page="10"
         >
-          <!-- Search -->
+          
           <template v-slot:top>
             <v-text-field
               v-model="search"
@@ -178,7 +178,7 @@ onMounted(() => {
             ></v-text-field>
           </template>
 
-          <!-- Actions Column -->
+          
           <template v-slot:item.actions="{ item }">
             <v-btn
               color="primary"
