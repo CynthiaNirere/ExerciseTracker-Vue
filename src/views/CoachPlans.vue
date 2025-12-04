@@ -12,7 +12,6 @@ const store = useStore()
 const user = ref(null)
 const currentUser = computed(() => store.state.currentUser || store.state.loginUser)
 
-// Active tab
 const activeTab = ref('plans')
 
 const athleteCount = computed(() => {
@@ -30,13 +29,15 @@ const trainingPlans = computed(() => {
   return stored !== null && stored !== undefined ? stored : 0
 })
 
-// Plans data
 const plans = ref([])
 const loading = ref(true)
+const error = ref(null)
+const successMessage = ref(null)
 
-// Dialog state
 const showCreateDialog = ref(false)
 const showEditDialog = ref(false)
+const showDeleteDialog = ref(false)
+const planToDelete = ref(null)
 const editingPlan = ref(null)
 const newPlan = ref({
   name: '',
@@ -44,13 +45,18 @@ const newPlan = ref({
   exercises: []
 })
 
-// Available exercises
 const availableExercises = ref([])
 const selectedExercise = ref(null)
 
-// Exercise details for plan
 const planExercises = ref([])
 const editPlanExercises = ref([])
+
+const showSuccess = (message) => {
+  successMessage.value = message
+  setTimeout(() => {
+    successMessage.value = null
+  }, 3000)
+}
 
 const changeTab = (tab) => {
   if (tab === 'athletes') {
@@ -67,18 +73,13 @@ const loadPlans = async () => {
     loading.value = true
     const response = await exercisePlanServices.getAllExercisePlans()
     plans.value = response.data
-    
-    console.log(' Plans loaded:', plans.value)
-    
     Utils.setStore('trainingPlans', plans.value.length)
-  } catch (error) {
-    console.error('Error loading plans:', error)
-    
-    if (error.response?.status === 401) {
-      alert('Session expired. Please log in again.')
-      router.push('/')
+  } catch (err) {
+    if (err.response?.status === 401) {
+      error.value = 'Session expired. Please log in again.'
+      setTimeout(() => router.push('/'), 2000)
     } else {
-      alert('Failed to load plans')
+      error.value = 'Unable to load training plans. Please try again.'
     }
   } finally {
     loading.value = false
@@ -89,9 +90,8 @@ const loadExercises = async () => {
   try {
     const response = await exerciseServices.getAllExercises()
     availableExercises.value = response.data
-    console.log(' Loaded exercises:', availableExercises.value.length)
-  } catch (error) {
-    console.error('Error loading exercises:', error)
+  } catch (err) {
+    error.value = 'Unable to load exercises'
   }
 }
 
@@ -125,7 +125,7 @@ const addExercise = () => {
   )
   
   if (alreadyAdded) {
-    alert('This exercise is already in the plan')
+    error.value = 'This exercise is already in the plan'
     return
   }
   
@@ -161,12 +161,12 @@ const getExerciseMuscleGroup = (exerciseId) => {
 
 const savePlan = async () => {
   if (!newPlan.value.name || !newPlan.value.description) {
-    alert('Please fill in plan name and description')
+    error.value = 'Please fill in plan name and description'
     return
   }
 
   if (planExercises.value.length === 0) {
-    alert('Please add at least one exercise to the plan')
+    error.value = 'Please add at least one exercise to the plan'
     return
   }
 
@@ -185,35 +185,26 @@ const savePlan = async () => {
       }))
     }
     
-    console.log(' Creating plan:', planData)
-    
     const response = await exercisePlanServices.createExercisePlan(planData)
     plans.value.push(response.data)
     
     Utils.setStore('trainingPlans', plans.value.length)
     
     closeCreateDialog()
-    alert('Training plan created successfully!')
-  } catch (error) {
-    console.error('Error creating plan:', error)
-    console.error('Error response:', error.response?.data)
-    
-    if (error.response?.status === 401) {
-      alert('Session expired. Please log in again.')
-      router.push('/')
+    showSuccess('Training plan created successfully')
+  } catch (err) {
+    if (err.response?.status === 401) {
+      error.value = 'Session expired. Please log in again.'
+      setTimeout(() => router.push('/'), 2000)
     } else {
-      alert('Failed to create plan: ' + (error.response?.data?.message || error.message))
+      error.value = err.response?.data?.message || 'Unable to create plan. Please try again.'
     }
   }
 }
 
 const openEditDialog = async (plan) => {
   try {
-    console.log(' Opening edit dialog for plan:', plan)
-    
-    // Fetch full plan details
     const response = await exercisePlanServices.getExercisePlanDetails(plan.id)
-    console.log(' Plan details:', response.data)
     
     editingPlan.value = {
       id: plan.id,
@@ -228,9 +219,6 @@ const openEditDialog = async (plan) => {
       exercisesArray = response.data.exercises
     }
     
-    console.log(' Using exercises array:', exercisesArray)
-    
-    // Map the backend response correctly
     editPlanExercises.value = exercisesArray.map(exercise => {
       const exerciseId = exercise.exercise_id || exercise.id
       
@@ -244,13 +232,10 @@ const openEditDialog = async (plan) => {
       }
     })
     
-    console.log(' Mapped exercises:', editPlanExercises.value)
-    
     showEditDialog.value = true
     loadExercises()
-  } catch (error) {
-    console.error('Error loading plan details:', error)
-    alert('Failed to load plan details')
+  } catch (err) {
+    error.value = 'Unable to load plan details. Please try again.'
   }
 }
 
@@ -262,12 +247,12 @@ const closeEditDialog = () => {
 
 const updatePlan = async () => {
   if (!editingPlan.value.name || !editingPlan.value.description) {
-    alert('Please fill in plan name and description')
+    error.value = 'Please fill in plan name and description'
     return
   }
 
   if (editPlanExercises.value.length === 0) {
-    alert('Please add at least one exercise to the plan')
+    error.value = 'Please add at least one exercise to the plan'
     return
   }
 
@@ -286,8 +271,6 @@ const updatePlan = async () => {
       }))
     }
     
-    console.log(' Updating plan:', planData)
-    
     const response = await exercisePlanServices.updateExercisePlan(editingPlan.value.id, planData)
     const index = plans.value.findIndex(p => p.id === editingPlan.value.id)
     if (index !== -1) {
@@ -297,16 +280,13 @@ const updatePlan = async () => {
     Utils.setStore('trainingPlans', plans.value.length)
     
     closeEditDialog()
-    alert('Training plan updated successfully!')
-  } catch (error) {
-    console.error('Error updating plan:', error)
-    console.error('Error response:', error.response?.data)
-    
-    if (error.response?.status === 401) {
-      alert('Session expired. Please log in again.')
-      router.push('/')
+    showSuccess('Training plan updated successfully')
+  } catch (err) {
+    if (err.response?.status === 401) {
+      error.value = 'Session expired. Please log in again.'
+      setTimeout(() => router.push('/'), 2000)
     } else {
-      alert('Failed to update plan: ' + (error.response?.data?.message || error.message))
+      error.value = err.response?.data?.message || 'Unable to update plan. Please try again.'
     }
   }
 }
@@ -319,7 +299,7 @@ const addExerciseToEdit = () => {
   )
   
   if (alreadyAdded) {
-    alert('This exercise is already in the plan')
+    error.value = 'This exercise is already in the plan'
     return
   }
   
@@ -339,24 +319,29 @@ const removeExerciseFromEdit = (index) => {
   editPlanExercises.value.splice(index, 1)
 }
 
-const deletePlan = async (plan) => {
-  if (confirm(`Delete "${plan.name}"?`)) {
-    try {
-      await exercisePlanServices.deleteExercisePlan(plan.id)
-      plans.value = plans.value.filter(p => p.id !== plan.id)
-      
-      Utils.setStore('trainingPlans', plans.value.length)
-      
-      alert('Plan deleted successfully!')
-    } catch (error) {
-      console.error('Error deleting plan:', error)
-      
-      if (error.response?.status === 401) {
-        alert('Session expired. Please log in again.')
-        router.push('/')
-      } else {
-        alert('Failed to delete plan')
-      }
+const confirmDeletePlan = (plan) => {
+  planToDelete.value = plan
+  showDeleteDialog.value = true
+}
+
+const deletePlan = async () => {
+  if (!planToDelete.value) return
+
+  try {
+    await exercisePlanServices.deleteExercisePlan(planToDelete.value.id)
+    plans.value = plans.value.filter(p => p.id !== planToDelete.value.id)
+    
+    Utils.setStore('trainingPlans', plans.value.length)
+    
+    showDeleteDialog.value = false
+    planToDelete.value = null
+    showSuccess('Training plan deleted successfully')
+  } catch (err) {
+    if (err.response?.status === 401) {
+      error.value = 'Session expired. Please log in again.'
+      setTimeout(() => router.push('/'), 2000)
+    } else {
+      error.value = 'Unable to delete plan. Please try again.'
     }
   }
 }
@@ -365,14 +350,11 @@ onMounted(async () => {
   user.value = Utils.getStore("user") || currentUser.value
   
   if (!user.value) {
-    console.log(' No user found, redirecting to login')
     router.push('/')
   } else if (user.value.role !== 'coach') {
-    console.log(' User is not a coach:', user.value.role)
-    alert('Access denied. Coach role required.')
-    router.push('/')
+    error.value = 'Access denied. Coach role required.'
+    setTimeout(() => router.push('/'), 2000)
   } else {
-    console.log(' User is coach, loading plans')
     await loadPlans()
   }
 })
@@ -385,6 +367,16 @@ onMounted(async () => {
     </v-toolbar>
 
     <br />
+
+    <!-- Success Message -->
+    <v-alert v-if="successMessage" type="success" class="mb-4" closable @click:close="successMessage = null">
+      {{ successMessage }}
+    </v-alert>
+
+    <!-- Error Message -->
+    <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
+      {{ error }}
+    </v-alert>
 
     <v-alert type="info">
       Welcome, Coach {{ user?.first_name || user?.fName }}!
@@ -465,7 +457,6 @@ onMounted(async () => {
                 
                 <v-divider class="my-3"></v-divider>
                 
-                <!-- ✅ FIXED: Use exerciseList -->
                 <div class="d-flex justify-space-between mb-2">
                   <span class="text-body-2">Exercises</span>
                   <span class="font-weight-bold">{{ plan.exerciseList?.length || 0 }}</span>
@@ -475,7 +466,6 @@ onMounted(async () => {
                   <span class="font-weight-bold">{{ plan.assignedAthletes || 0 }}</span>
                 </div>
                 
-                <!-- Show exercise list if available -->
                 <div v-if="plan.exerciseList && plan.exerciseList.length > 0" class="mt-3">
                   <v-divider class="mb-2"></v-divider>
                   <div class="text-caption font-weight-bold mb-1">Exercises:</div>
@@ -499,7 +489,7 @@ onMounted(async () => {
               
               <v-card-actions>
                 <v-btn variant="text" color="primary" @click="openEditDialog(plan)">Edit</v-btn>
-                <v-btn variant="text" color="error" @click="deletePlan(plan)">Delete</v-btn>
+                <v-btn variant="text" color="error" @click="confirmDeletePlan(plan)">Delete</v-btn>
               </v-card-actions>
             </v-card>
           </v-col>
@@ -833,6 +823,39 @@ onMounted(async () => {
             :disabled="!editingPlan.name || !editingPlan.description || editPlanExercises.length === 0"
           >
             Update Plan
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Delete Plan Confirmation Dialog -->
+    <v-dialog v-model="showDeleteDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="bg-error text-white">
+          <v-icon left color="white">mdi-alert-circle</v-icon>
+          Delete Training Plan
+        </v-card-title>
+
+        <v-card-text class="pt-6">
+          <div v-if="planToDelete" class="text-center">
+            <v-icon size="64" color="error" class="mb-4">mdi-clipboard-text-multiple</v-icon>
+            <p class="text-h6 mb-2">Are you sure you want to delete this training plan?</p>
+            <p class="text-body-1 font-weight-bold">{{ planToDelete.name }}</p>
+            <p class="text-caption text-grey mb-4">{{ planToDelete.description }}</p>
+            <v-alert type="warning" variant="tonal">
+              <strong>Warning:</strong> This action cannot be undone. The training plan and all associated exercises will be permanently removed.
+            </v-alert>
+          </div>
+        </v-card-text>
+
+        <v-card-actions class="px-6 pb-6">
+          <v-spacer></v-spacer>
+          <v-btn variant="text" @click="showDeleteDialog = false; planToDelete = null">
+            Cancel
+          </v-btn>
+          <v-btn color="error" @click="deletePlan">
+            <v-icon left>mdi-delete</v-icon>
+            Delete Plan
           </v-btn>
         </v-card-actions>
       </v-card>

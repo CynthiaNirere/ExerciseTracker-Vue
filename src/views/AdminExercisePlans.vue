@@ -342,9 +342,7 @@ onMounted(async () => {
                   class="px-0"
                   min-height="32"
                 >
-                  <template v-slot:prepend>
-                    <v-icon size="small" color="success">mdi-dumbbell</v-icon>
-                  </template>
+                 
                   <v-list-item-title class="text-body-2">
                     {{ exercise.name }}
                   </v-list-item-title>
