@@ -102,7 +102,7 @@ const deleteExercise = async (item) => {
   }
 };
 
-// Cancel actions
+
 const cancelAdd = () => {
   newExercise.value = { 
     name: "", 
@@ -128,7 +128,7 @@ onMounted(() => {
 <template>
   <v-container>
     <v-card class="mx-auto" max-width="1200">
-      <!-- Header Section -->
+      
       <v-card-title class="text-h4 font-weight-bold pa-6">
         Standard Exercises
         <v-spacer></v-spacer>
@@ -202,7 +202,7 @@ onMounted(() => {
       </v-card-text>
     </v-card>
 
-    <!-- Add Exercise Dialog -->
+    
     <v-dialog v-model="showAddDialog" max-width="800px">
       <v-card>
         <v-card-title>
@@ -257,7 +257,7 @@ onMounted(() => {
       </v-card>
     </v-dialog>
 
-    <!-- Edit Exercise Dialog -->
+   
     <v-dialog v-model="showEditDialog" max-width="800px">
       <v-card v-if="selectedExercise">
         <v-card-title>
