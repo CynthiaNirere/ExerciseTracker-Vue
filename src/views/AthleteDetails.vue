@@ -621,19 +621,6 @@ onMounted(async () => {
                             {{ assignment.plan.exerciseCount }} exercises
                           </p>
                           <p class="text-body-2 mt-2">{{ assignment.plan.description || 'No description' }}</p>
-                          
-                          <v-divider class="my-3"></v-divider>
-                          
-                          <div class="d-flex justify-space-between">
-                            <div>
-                              <span class="text-caption text-grey">Duration: </span>
-                              <span class="font-weight-bold">{{ assignment.plan.duration || '-' }}</span>
-                            </div>
-                            <div>
-                              <span class="text-caption text-grey">Difficulty: </span>
-                              <span class="font-weight-bold">{{ assignment.plan.difficulty || '-' }}</span>
-                            </div>
-                          </div>
                         </div>
                         <v-btn 
                           icon 

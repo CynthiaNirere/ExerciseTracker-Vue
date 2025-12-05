@@ -134,7 +134,6 @@ const addExercise = () => {
     sets: 3,
     reps: 10,
     weight: 0,
-    duration_seconds: null,
     rest_seconds: 60
   })
   
@@ -179,7 +178,6 @@ const savePlan = async () => {
         sets: item.sets,
         reps: item.reps,
         weight: item.weight || 0,
-        duration_seconds: item.duration_seconds,
         rest_seconds: item.rest_seconds,
         order: index
       }))
@@ -227,7 +225,6 @@ const openEditDialog = async (plan) => {
         sets: exercise.ExercisePlanItem?.sets || 3,
         reps: parseInt(exercise.ExercisePlanItem?.reps) || 10,
         weight: parseFloat(exercise.ExercisePlanItem?.weight) || 0,
-        duration_seconds: exercise.ExercisePlanItem?.durationSeconds || null,
         rest_seconds: exercise.ExercisePlanItem?.restSeconds || 60
       }
     })
@@ -265,7 +262,6 @@ const updatePlan = async () => {
         sets: item.sets,
         reps: item.reps,
         weight: item.weight || 0,
-        duration_seconds: item.duration_seconds,
         rest_seconds: item.rest_seconds,
         order: index
       }))
@@ -308,7 +304,6 @@ const addExerciseToEdit = () => {
     sets: 3,
     reps: 10,
     weight: 0,
-    duration_seconds: null,
     rest_seconds: 60
   })
   
@@ -590,11 +585,11 @@ onMounted(async () => {
                   color="grey-lighten-4"
                 >
                   <v-row align="center">
-                    <v-col cols="12" sm="4">
+                    <v-col cols="12" sm="5">
                       <div class="font-weight-bold">{{ getExerciseName(item.exercise_id) }}</div>
                       <div class="text-caption text-medium-emphasis">{{ getExerciseMuscleGroup(item.exercise_id) }}</div>
                     </v-col>
-                    <v-col cols="6" sm="2">
+                    <v-col cols="4" sm="2">
                       <v-text-field
                         v-model.number="item.sets"
                         label="Sets"
@@ -605,7 +600,7 @@ onMounted(async () => {
                         hide-details
                       ></v-text-field>
                     </v-col>
-                    <v-col cols="6" sm="2">
+                    <v-col cols="4" sm="2">
                       <v-text-field
                         v-model.number="item.reps"
                         label="Reps"
@@ -616,19 +611,7 @@ onMounted(async () => {
                         hide-details
                       ></v-text-field>
                     </v-col>
-                    <v-col cols="6" sm="2">
-                      <v-text-field
-                        v-model.number="item.weight"
-                        label="Weight (lbs)"
-                        type="number"
-                        min="0"
-                        step="5"
-                        density="compact"
-                        variant="outlined"
-                        hide-details
-                      ></v-text-field>
-                    </v-col>
-                    <v-col cols="6" sm="2">
+                    <v-col cols="4" sm="2">
                       <v-text-field
                         v-model.number="item.rest_seconds"
                         label="Rest (sec)"
@@ -639,8 +622,8 @@ onMounted(async () => {
                         hide-details
                       ></v-text-field>
                     </v-col>
-                    <v-col cols="12" sm="auto">
-                      <v-btn icon variant="text" color="error" @click="removeExercise(index)">
+                    <v-col cols="12" sm="1">
+                      <v-btn icon variant="text" color="error" size="small" @click="removeExercise(index)">
                         <v-icon>mdi-delete</v-icon>
                       </v-btn>
                     </v-col>
@@ -753,11 +736,11 @@ onMounted(async () => {
                   color="grey-lighten-4"
                 >
                   <v-row align="center">
-                    <v-col cols="12" sm="4">
+                    <v-col cols="12" sm="5">
                       <div class="font-weight-bold">{{ getExerciseName(item.exercise_id) }}</div>
                       <div class="text-caption text-medium-emphasis">{{ getExerciseMuscleGroup(item.exercise_id) }}</div>
                     </v-col>
-                    <v-col cols="6" sm="2">
+                    <v-col cols="4" sm="2">
                       <v-text-field
                         v-model.number="item.sets"
                         label="Sets"
@@ -768,7 +751,7 @@ onMounted(async () => {
                         hide-details
                       ></v-text-field>
                     </v-col>
-                    <v-col cols="6" sm="2">
+                    <v-col cols="4" sm="2">
                       <v-text-field
                         v-model.number="item.reps"
                         label="Reps"
@@ -779,19 +762,7 @@ onMounted(async () => {
                         hide-details
                       ></v-text-field>
                     </v-col>
-                    <v-col cols="6" sm="2">
-                      <v-text-field
-                        v-model.number="item.weight"
-                        label="Weight (lbs)"
-                        type="number"
-                        min="0"
-                        step="5"
-                        density="compact"
-                        variant="outlined"
-                        hide-details
-                      ></v-text-field>
-                    </v-col>
-                    <v-col cols="6" sm="2">
+                    <v-col cols="4" sm="2">
                       <v-text-field
                         v-model.number="item.rest_seconds"
                         label="Rest (sec)"
@@ -802,8 +773,8 @@ onMounted(async () => {
                         hide-details
                       ></v-text-field>
                     </v-col>
-                    <v-col cols="12" sm="auto">
-                      <v-btn icon variant="text" color="error" @click="removeExerciseFromEdit(index)">
+                    <v-col cols="12" sm="1">
+                      <v-btn icon variant="text" color="error" size="small" @click="removeExerciseFromEdit(index)">
                         <v-icon>mdi-delete</v-icon>
                       </v-btn>
                     </v-col>
