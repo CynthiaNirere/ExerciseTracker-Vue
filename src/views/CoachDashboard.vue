@@ -56,10 +56,23 @@ const loadAthletes = async () => {
     loading.value = true
     error.value = null
     const coachId = user.value?.id || user.value?.userId
+    console.log("🔍 Loading athletes for coach:", coachId)
+    
     const response = await athleteServices.getAthletesByCoach(coachId)
-    athletes.value = response.data
+    console.log("✅ Athletes loaded:", response.data)
+    
+    // Filter out any invalid athletes
+    athletes.value = response.data.filter(athlete => {
+      if (!athlete.user_id) {
+        console.warn("⚠️ Athlete missing user_id:", athlete)
+        return false
+      }
+      return true
+    })
+    
     Utils.setStore('athleteCount', athletes.value.length)
   } catch (err) {
+    console.error("❌ Error loading athletes:", err)
     if (err.response?.status === 401) {
       error.value = 'Session expired. Please log in again.'
       setTimeout(() => router.push('/'), 2000)
@@ -112,13 +125,17 @@ const addAthlete = async () => {
       coachId: coachId
     }
 
+    console.log("📝 Creating athlete:", athleteData)
     const response = await userServices.createUser(athleteData)
+    console.log("✅ Athlete created:", response.data)
+    
     athletes.value.push(response.data)
     Utils.setStore('athleteCount', athletes.value.length)
     
     closeAddAthleteDialog()
     showSuccess('Athlete added successfully')
   } catch (err) {
+    console.error("❌ Error creating athlete:", err)
     if (err.response?.status === 401) {
       error.value = 'Session expired. Please log in again.'
       setTimeout(() => router.push('/'), 2000)
@@ -131,10 +148,26 @@ const addAthlete = async () => {
 }
 
 const viewAthleteDetails = (athleteId) => {
+  console.log("👀 Viewing athlete details, ID:", athleteId)
+  
+  if (!athleteId) {
+    console.error("❌ No athlete ID provided!")
+    error.value = "Cannot view athlete details - invalid athlete ID"
+    return
+  }
+  
   router.push({ name: 'athleteDetail', params: { id: athleteId } })
 }
 
 const confirmDeleteAthlete = (athlete) => {
+  console.log("🗑️ Confirming delete for athlete:", athlete)
+  
+  if (!athlete.user_id) {
+    console.error("❌ No user_id for athlete:", athlete)
+    error.value = "Cannot delete athlete - invalid athlete ID"
+    return
+  }
+  
   athleteToDelete.value = athlete
   showDeleteDialog.value = true
 }
@@ -143,13 +176,18 @@ const deleteAthlete = async () => {
   if (!athleteToDelete.value) return
 
   try {
+    console.log("🗑️ Deleting athlete:", athleteToDelete.value.user_id)
+    
     await userServices.deleteUser(athleteToDelete.value.user_id)
     athletes.value = athletes.value.filter(a => a.user_id !== athleteToDelete.value.user_id)
     Utils.setStore('athleteCount', athletes.value.length)
     showDeleteDialog.value = false
     athleteToDelete.value = null
+    
+    console.log("✅ Athlete deleted")
     showSuccess('Athlete deleted successfully')
   } catch (err) {
+    console.error("❌ Error deleting athlete:", err)
     if (err.response?.status === 401) {
       error.value = 'Session expired. Please log in again.'
       setTimeout(() => router.push('/'), 2000)
@@ -294,11 +332,22 @@ onMounted(async () => {
               </v-card-text>
 
               <v-card-actions>
-                <v-btn variant="text" color="primary" @click="viewAthleteDetails(athlete.user_id)">
+                <v-btn 
+                  variant="text" 
+                  color="primary" 
+                  @click="viewAthleteDetails(athlete.user_id)"
+                  :disabled="!athlete.user_id"
+                >
                   View Details
                 </v-btn>
                 <v-spacer></v-spacer>
-                <v-btn icon size="small" color="error" @click="confirmDeleteAthlete(athlete)">
+                <v-btn 
+                  icon 
+                  size="small" 
+                  color="error" 
+                  @click="confirmDeleteAthlete(athlete)"
+                  :disabled="!athlete.user_id"
+                >
                   <v-icon>mdi-delete</v-icon>
                 </v-btn>
               </v-card-actions>

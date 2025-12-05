@@ -7,12 +7,12 @@ export default {
   
   // Get all athletes for a specific coach
   getAthletesByCoach(coachId) {
-    return apiClient.get(`/coach/${coachId}/athletes`);  // ✅ FIXED
+    return apiClient.get(`/coach/${coachId}/athletes`);
   },
   
   // Get specific athlete details
   getAthleteById(athleteId) {
-    return apiClient.get(`/coach/athlete/${athleteId}`);  // ✅ FIXED
+    return apiClient.get(`/coach/athlete/${athleteId}`);
   },
   
   // Create new athlete (by coach)
@@ -22,12 +22,12 @@ export default {
   
   // Update athlete profile
   updateAthlete(athleteId, data) {
-    return apiClient.put(`/athletes/${athleteId}`, data);  // ✅ FIXED
+    return apiClient.put(`/athletes/${athleteId}`, data);
   },
   
   // Delete athlete
   deleteAthlete(athleteId) {
-    return apiClient.delete(`/athletes/${athleteId}`);  // ✅ FIXED
+    return apiClient.delete(`/athletes/${athleteId}`);
   },
   
   // Assign athlete to coach
@@ -39,19 +39,72 @@ export default {
     });
   },
   
+  // ========================================
+  // Athlete Profile
+  // ========================================
+  
   getAthleteProfile() {
-    return apiClient.get(`/athletes/profile`);  
+    return apiClient.get(`/athletes/profile`);
   },
   
   updateAthleteProfile(profileData) {
-    return apiClient.put(`/athletes/profile`, profileData);  
+    return apiClient.put(`/athletes/profile`, profileData);
   },
   
   createAthleteProfile(profileData) {
-    return apiClient.put(`/athletes/profile`, profileData);  
+    return apiClient.put(`/athletes/profile`, profileData);
   },
   
   getAthleteWorkoutHistory(athleteId) {
-    return apiClient.get(`/athletes/${athleteId}/workouts`);  
+    return apiClient.get(`/athletes/${athleteId}/workouts`);
+  },
+  
+  // ========================================
+  // Goals
+  // ========================================
+  
+  getGoals() {
+    return apiClient.get(`/athletes/goals`);
+  },
+  
+  createGoal(goalData) {
+    return apiClient.post(`/athletes/goals`, goalData);
+  },
+  
+  updateGoal(goalId, goalData) {
+    return apiClient.put(`/athletes/goals/${goalId}`, goalData);
+  },
+  
+  deleteGoal(goalId) {
+    return apiClient.delete(`/athletes/goals/${goalId}`);
+  },
+  
+  // ✨ NEW: Get exercises from assigned plans
+  getAssignedPlanExercises() {
+    return apiClient.get(`/athletes/assigned-plan-exercises`);
+  },
+  
+  // ========================================
+  // Exercise Results
+  // ========================================
+  
+  getExerciseResults() {
+    return apiClient.get(`/athletes/results`);
+  },
+  
+  recordExerciseResult(resultData) {
+    return apiClient.post(`/athletes/results`, resultData);
+  },
+  
+  // ========================================
+  // Statistics & Progress
+  // ========================================
+  
+  getStatistics() {
+    return apiClient.get(`/athletes/statistics`);
+  },
+  
+  getProgress() {
+    return apiClient.get(`/athletes/progress`);
   }
 };
